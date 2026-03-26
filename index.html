@@ -8,25 +8,93 @@
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  </style>
 </head>
 <body>
   <div id="root"></div>
   <script type="text/babel">
 const { useState } = React;
 
+const { useState } = React;
+
+// Add global styles for font
+const GlobalStyle = () => {
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      * {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+  return null;
+};
+
 // Data
 const BUSINESSES = [
-  { id: 1, logo: 'TM', name: 'TechMakers Inc.', category: 'Technology', rating: 5, reviews: 48, description: 'Leading provider of custom electronics and IoT solutions.', verified: true },
-  { id: 2, logo: 'GP', name: 'GlobalPack Solutions', category: 'Packaging', rating: 4, reviews: 32, description: 'Sustainable packaging solutions for businesses.', verified: true },
-  { id: 3, logo: 'IC', name: 'InnoConstruct Ltd.', category: 'Construction', rating: 5, reviews: 67, description: 'Commercial construction with green building focus.', verified: true }
+  { id: 1, logo: 'TM', name: 'TechMakers Inc.', category: 'Technology', rating: 5, reviews: 48, description: 'Leading provider of custom electronics and IoT solutions.', verified: true, featured: true, location: 'San Francisco', priceRange: '$$$', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { id: 2, logo: 'GP', name: 'GlobalPack Solutions', category: 'Packaging', rating: 4, reviews: 32, description: 'Sustainable packaging solutions for businesses.', verified: true, featured: true, location: 'Chicago', priceRange: '$$', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+  { id: 3, logo: 'IC', name: 'InnoConstruct Ltd.', category: 'Construction', rating: 5, reviews: 67, description: 'Commercial construction with green building focus.', verified: true, featured: false, location: 'New York', priceRange: '$$$$', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+  { id: 4, logo: 'SF', name: 'SmartFactory Pro', category: 'Manufacturing', rating: 5, reviews: 89, description: 'Advanced manufacturing automation and robotics solutions.', verified: true, featured: false, location: 'Detroit', priceRange: '$$$', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+  { id: 5, logo: 'DL', name: 'DataLogix Corp', category: 'Technology', rating: 4, reviews: 156, description: 'Cloud infrastructure and data analytics platforms.', verified: true, featured: false, location: 'Austin', priceRange: '$$$$', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+  { id: 6, logo: 'GS', name: 'GreenSupply Co.', category: 'Logistics', rating: 4, reviews: 72, description: 'Eco-friendly supply chain and logistics management.', verified: true, featured: false, location: 'Seattle', priceRange: '$$', gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
+  { id: 7, logo: 'FB', name: 'FreshBrew Industries', category: 'Food & Bev', rating: 5, reviews: 43, description: 'Premium coffee roasting and distribution services.', verified: true, featured: false, location: 'Portland', priceRange: '$$', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
+  { id: 8, logo: 'CS', name: 'CloudSync Solutions', category: 'Technology', rating: 4, reviews: 91, description: 'Enterprise software integration and cloud migration.', verified: true, featured: false, location: 'San Francisco', priceRange: '$$$', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
+  { id: 9, logo: 'MB', name: 'ModularBuild Inc.', category: 'Construction', rating: 5, reviews: 38, description: 'Prefab construction and modular building systems.', verified: true, featured: false, location: 'Denver', priceRange: '$$$', gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)' },
+  { id: 10, logo: 'PE', name: 'PackEco Systems', category: 'Packaging', rating: 4, reviews: 64, description: 'Biodegradable packaging and waste reduction solutions.', verified: false, featured: false, location: 'Boston', priceRange: '$$', gradient: 'linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)' },
+  { id: 11, logo: 'TL', name: 'TransLogic Network', category: 'Logistics', rating: 5, reviews: 127, description: 'International freight forwarding and customs brokerage.', verified: true, featured: false, location: 'Miami', priceRange: '$$$$', gradient: 'linear-gradient(135deg, #f77062 0%, #fe5196 100%)' },
+  { id: 12, logo: 'FS', name: 'FleetSync Systems', category: 'Services', rating: 4, reviews: 55, description: 'Fleet management and vehicle tracking solutions.', verified: true, featured: false, location: 'Atlanta', priceRange: '$$', gradient: 'linear-gradient(135deg, #c471f5 0%, #fa71cd 100%)' },
+  { id: 13, logo: 'AI', name: 'AgriInnovate', category: 'Food & Bev', rating: 5, reviews: 29, description: 'Smart farming technology and agricultural IoT solutions.', verified: true, featured: false, location: 'Phoenix', priceRange: '$$$', gradient: 'linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%)' },
+  { id: 14, logo: 'WS', name: 'WeldSpecs Pro', category: 'Manufacturing', rating: 4, reviews: 82, description: 'Industrial welding equipment and metal fabrication.', verified: true, featured: false, location: 'Pittsburgh', priceRange: '$$', gradient: 'linear-gradient(135deg, #fdcbf1 0%, #e6dee9 100%)' },
+  { id: 15, logo: 'DT', name: 'DigitalTrade Hub', category: 'Services', rating: 5, reviews: 103, description: 'B2B marketplace platform and trade facilitation services.', verified: true, featured: false, location: 'Los Angeles', priceRange: '$$$', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' }
 ];
 
+const LOCATIONS = ['All Locations', 'San Francisco', 'New York', 'Chicago', 'Austin', 'Seattle', 'Portland', 'Denver', 'Boston', 'Miami', 'Atlanta', 'Phoenix', 'Pittsburgh', 'Los Angeles', 'Detroit'];
+const PRICE_RANGES = ['All Prices', '$', '$$', '$$$', '$$$$'];
+const RATING_FILTERS = ['All Ratings', '5 Stars', '4+ Stars', '3+ Stars'];
+
 const PRODUCTS = [
-  { id: 1, name: 'Smart Sensor Pro', price: '$299', icon: '📱', status: 'Active', sales: 24 },
-  { id: 2, name: 'IoT Gateway Plus', price: '$499', icon: '🔌', status: 'Active', sales: 18 },
-  { id: 3, name: 'LED Controller', price: '$149', icon: '💡', status: 'Active', sales: 42 },
-  { id: 4, name: 'Power Module V2', price: '$199', icon: '🔋', status: 'Draft', sales: 0 },
-  { id: 5, name: 'Wireless Sensor', price: '$399', icon: '📡', status: 'Active', sales: 15 }
+  { id: 1, name: 'Smart Sensor Pro', price: '$299', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', status: 'Active', sales: 24, 
+    variations: [{ name: 'Standard', price: 299 }, { name: 'Advanced', price: 399 }],
+    tieredPricing: [{ min: 1, max: 10, price: 299 }, { min: 11, max: 50, price: 279 }, { min: 51, max: null, price: 259 }],
+    videoUrl: '', directSales: false },
+  { id: 2, name: 'IoT Gateway Plus', price: '$499', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', status: 'Active', sales: 18,
+    variations: [],
+    tieredPricing: [{ min: 1, max: 5, price: 499 }, { min: 6, max: null, price: 459 }],
+    videoUrl: '', directSales: false },
+  { id: 3, name: 'LED Controller', price: '$149', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', status: 'Active', sales: 42,
+    variations: [{ name: 'RGB', price: 149 }, { name: 'RGBW', price: 179 }],
+    tieredPricing: [{ min: 1, max: 20, price: 149 }, { min: 21, max: null, price: 139 }],
+    videoUrl: '', directSales: false },
+  { id: 4, name: 'Power Module V2', price: '$199', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', status: 'Draft', sales: 0,
+    variations: [],
+    tieredPricing: [{ min: 1, max: null, price: 199 }],
+    videoUrl: '', directSales: false },
+  { id: 5, name: 'Wireless Sensor', price: '$399', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', status: 'Active', sales: 15,
+    variations: [],
+    tieredPricing: [{ min: 1, max: null, price: 399 }],
+    videoUrl: '', directSales: false }
 ];
 
 const MESSAGES = [
@@ -48,6 +116,52 @@ const BROWSE_RFQS = [
 
 const CATEGORIES = ['Manufacturing', 'Technology', 'Construction', 'Logistics', 'Food & Bev', 'Services'];
 
+const CATEGORY_ICONS = {
+  'Manufacturing': (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M12 1v6m0 6v6m5.2-13.2l-3.5 3.5m-3.4 3.4l-3.5 3.5m13.2-5.2l-3.5 3.5m-3.4 3.4l-3.5 3.5"></path>
+    </svg>
+  ),
+  'Technology': (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+      <line x1="8" y1="21" x2="16" y2="21"></line>
+      <line x1="12" y1="17" x2="12" y2="21"></line>
+    </svg>
+  ),
+  'Construction': (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+    </svg>
+  ),
+  'Logistics': (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="3" width="15" height="13"></rect>
+      <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+      <circle cx="5.5" cy="18.5" r="2.5"></circle>
+      <circle cx="18.5" cy="18.5" r="2.5"></circle>
+    </svg>
+  ),
+  'Food & Bev': (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+      <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+      <line x1="6" y1="1" x2="6" y2="4"></line>
+      <line x1="10" y1="1" x2="10" y2="4"></line>
+      <line x1="14" y1="1" x2="14" y2="4"></line>
+    </svg>
+  ),
+  'Services': (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+      <circle cx="9" cy="7" r="4"></circle>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    </svg>
+  )
+};
+
 const REVIEWS = [
   { name: 'John Davis', initials: 'JD', rating: 5, text: 'Excellent quality products!', time: '2 weeks ago' },
   { name: 'Sarah Kim', initials: 'SK', rating: 4, text: 'Great IoT solutions.', time: '1 month ago' }
@@ -67,37 +181,70 @@ const Header = ({ title, onBack, action }) => (
 );
 
 const BusinessCard = ({ business, onNavigate, onMessage }) => (
-  <div className="bg-white rounded-xl p-4 border border-stone-200">
-    <div className="flex gap-3 mb-3">
+  <div className="bg-white rounded-xl overflow-hidden border border-stone-200">
+    {/* Business banner gradient */}
+    {business.gradient && (
       <div 
-        className="w-14 h-14 bg-stone-800 rounded-lg flex items-center justify-center text-white text-xl font-bold cursor-pointer"
-        onClick={onNavigate}
-      >
-        {business.logo}
-      </div>
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-black cursor-pointer" onClick={onNavigate}>{business.name}</span>
-          {business.verified && <span className="text-black text-sm">✓</span>}
+        className="h-32"
+        style={{ background: business.gradient }}
+      />
+    )}
+    <div className="p-4">
+      <div className="flex gap-3 mb-3">
+        <div 
+          className="w-14 h-14 bg-stone-800 rounded-lg flex items-center justify-center text-white text-xl font-bold cursor-pointer flex-shrink-0"
+          onClick={onNavigate}
+        >
+          {business.logo}
         </div>
-        <div className="text-sm text-stone-600">{business.category}</div>
-        <div className="text-black text-sm">{'★'.repeat(business.rating)}{'☆'.repeat(5-business.rating)} ({business.reviews})</div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-semibold text-black cursor-pointer" onClick={onNavigate}>{business.name}</span>
+            {business.verified && (
+              <span className="bg-black text-white px-2 py-0.5 rounded text-xs font-medium">
+                Verified
+              </span>
+            )}
+          </div>
+          <div className="text-sm text-stone-600">{business.category}</div>
+          <div className="text-black text-sm">{'★'.repeat(business.rating)}{'☆'.repeat(5-business.rating)} ({business.reviews})</div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-stone-500 flex items-center gap-1">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+              {business.location}
+            </span>
+            <span className="text-xs text-stone-500">• {business.priceRange}</span>
+          </div>
+        </div>
       </div>
-    </div>
-    <p className="text-sm text-stone-700 mb-3">{business.description}</p>
-    <div className="flex gap-2">
-      <button className="flex-1 bg-white border-2 border-black text-black px-3 py-2 rounded-lg text-sm font-medium hover:bg-black hover:text-white transition-colors">
-        📞 Call
-      </button>
-      <button className="flex-1 bg-white border-2 border-black text-black px-3 py-2 rounded-lg text-sm font-medium hover:bg-black hover:text-white transition-colors">
-        ✉️ Email
-      </button>
-      <button 
-        onClick={onMessage}
-        className="flex-1 bg-black text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors"
-      >
-        💬 Message
-      </button>
+      <p className="text-sm text-stone-700 mb-3">{business.description}</p>
+      <div className="flex gap-2">
+        <button className="flex-1 bg-white border-2 border-black text-black px-3 py-2 rounded-lg text-sm font-medium hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+          </svg>
+          Call
+        </button>
+        <button className="flex-1 bg-white border-2 border-black text-black px-3 py-2 rounded-lg text-sm font-medium hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+          Email
+        </button>
+        <button 
+          onClick={onMessage}
+          className="flex-1 bg-black text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors flex items-center justify-center gap-1"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          Message
+        </button>
+      </div>
     </div>
   </div>
 );
@@ -123,10 +270,46 @@ const MessageCard = ({ msg }) => (
 );
 
 const ProductCard = ({ product, onClick }) => (
-  <div className="bg-white rounded-xl p-3 border border-stone-200 cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
-    <div className="text-3xl mb-2 text-center">{product.icon}</div>
-    <div className="font-semibold text-sm text-black mb-1">{product.name}</div>
-    <div className="text-black font-bold">{product.price}</div>
+  <div className="bg-white rounded-xl overflow-hidden border border-stone-200 cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
+    <div 
+      className="aspect-square"
+      style={{ background: product.gradient }}
+    />
+    <div className="p-3">
+      <div className="font-semibold text-sm text-black mb-1 line-clamp-2">{product.name}</div>
+      <div className="text-black font-bold mb-2">{product.price}</div>
+      
+      {/* Show variations if available */}
+      {product.variations && product.variations.length > 0 && (
+        <div className="mb-2">
+          <div className="text-xs text-stone-500 mb-1">Variations:</div>
+          <div className="space-y-1">
+            {product.variations.slice(0, 2).map((v, i) => (
+              <div key={i} className="text-xs text-stone-600">
+                • {v.name} - ${v.price}
+              </div>
+            ))}
+            {product.variations.length > 2 && (
+              <div className="text-xs text-stone-400">+{product.variations.length - 2} more</div>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* Show tiered pricing badge */}
+      {product.tieredPricing && product.tieredPricing.length > 1 && (
+        <div className="inline-block bg-blue-50 text-blue-600 px-2 py-1 rounded text-xs font-medium mb-2">
+          Bulk pricing
+        </div>
+      )}
+      
+      {/* Show direct sales badge if enabled */}
+      {product.directSales && (
+        <div className="inline-block bg-green-50 text-green-600 px-2 py-1 rounded text-xs font-medium ml-1 mb-2">
+          Buy now
+        </div>
+      )}
+    </div>
   </div>
 );
 
@@ -182,6 +365,46 @@ function SyndicateMarketplace() {
   const [screen, setScreen] = useState('home');
   const [rfqTab, setRfqTab] = useState('browse');
   const [selectedBusiness, setSelectedBusiness] = useState(BUSINESSES[0]);
+  const [visibleBusinessCount, setVisibleBusinessCount] = useState(5);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Explore page filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All Industries');
+  const [selectedLocation, setSelectedLocation] = useState('All Locations');
+  const [selectedRating, setSelectedRating] = useState('All Ratings');
+  const [selectedPrice, setSelectedPrice] = useState('All Prices');
+  const [sortOrder, setSortOrder] = useState('relevance'); // relevance, a-z, z-a
+  const [visibleExploreCount, setVisibleExploreCount] = useState(6);
+  const [isExploreLoading, setIsExploreLoading] = useState(false);
+  const [exploreTab, setExploreTab] = useState('businesses'); // businesses or products
+
+  // User profile management
+  const [isProMember, setIsProMember] = useState(false);
+  const [userProfile, setUserProfile] = useState({
+    businessName: 'My Business Inc.',
+    logo: 'MB',
+    category: 'Technology Vendor',
+    email: 'contact@mybusiness.com',
+    phone: '+1 (555) 123-4567',
+    website: 'www.mybusiness.com',
+    description: 'Leading provider of innovative business solutions.',
+    bannerColor: '#000000'
+  });
+
+  // Product management
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    description: '',
+    basePrice: '',
+    variations: [],
+    tieredPricing: [{ min: 1, max: null, price: '' }],
+    videoUrl: '',
+    directSales: false,
+    status: 'Draft'
+  });
 
   const unreadCount = MESSAGES.filter(m => m.unread).length;
 
@@ -190,10 +413,113 @@ function SyndicateMarketplace() {
     setScreen('detail');
   };
 
+  // Get featured businesses
+  const featuredBusinesses = BUSINESSES.filter(b => b.featured);
+  
+  // Get other businesses for feed (excluding featured)
+  const feedBusinesses = BUSINESSES.filter(b => !b.featured).slice(0, visibleBusinessCount);
+
+  // Filter and sort businesses for explore page
+  const getFilteredBusinesses = () => {
+    let filtered = [...BUSINESSES];
+
+    // Text search
+    if (searchQuery) {
+      filtered = filtered.filter(b => 
+        b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.location.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (selectedCategory !== 'All Industries') {
+      filtered = filtered.filter(b => b.category === selectedCategory);
+    }
+
+    // Location filter
+    if (selectedLocation !== 'All Locations') {
+      filtered = filtered.filter(b => b.location === selectedLocation);
+    }
+
+    // Rating filter
+    if (selectedRating === '5 Stars') {
+      filtered = filtered.filter(b => b.rating === 5);
+    } else if (selectedRating === '4+ Stars') {
+      filtered = filtered.filter(b => b.rating >= 4);
+    } else if (selectedRating === '3+ Stars') {
+      filtered = filtered.filter(b => b.rating >= 3);
+    }
+
+    // Price filter
+    if (selectedPrice !== 'All Prices') {
+      filtered = filtered.filter(b => b.priceRange === selectedPrice);
+    }
+
+    // Sort
+    if (sortOrder === 'a-z') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortOrder === 'z-a') {
+      filtered.sort((a, b) => b.name.localeCompare(a.name));
+    }
+
+    return filtered.slice(0, visibleExploreCount);
+  };
+
+  const filteredBusinesses = getFilteredBusinesses();
+
+  // Infinite scroll handler for home
+  const handleScroll = (e) => {
+    const element = e.target;
+    if (element.scrollHeight - element.scrollTop <= element.clientHeight + 100) {
+      loadMoreBusinesses();
+    }
+  };
+
+  const loadMoreBusinesses = () => {
+    if (isLoading || visibleBusinessCount >= BUSINESSES.filter(b => !b.featured).length) return;
+    
+    setIsLoading(true);
+    setTimeout(() => {
+      setVisibleBusinessCount(prev => prev + 3);
+      setIsLoading(false);
+    }, 500);
+  };
+
+  // Infinite scroll handler for explore
+  const handleExploreScroll = (e) => {
+    const element = e.target;
+    if (element.scrollHeight - element.scrollTop <= element.clientHeight + 100) {
+      loadMoreExplore();
+    }
+  };
+
+  const loadMoreExplore = () => {
+    if (isExploreLoading || visibleExploreCount >= BUSINESSES.length) return;
+    
+    setIsExploreLoading(true);
+    setTimeout(() => {
+      setVisibleExploreCount(prev => prev + 3);
+      setIsExploreLoading(false);
+    }, 500);
+  };
+
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSelectedCategory('All Industries');
+    setSelectedLocation('All Locations');
+    setSelectedRating('All Ratings');
+    setSelectedPrice('All Prices');
+    setSortOrder('relevance');
+    setVisibleExploreCount(6);
+  };
+
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 p-4">
+    <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 p-4">
+      <GlobalStyle />
       {/* Fixed smartphone dimensions container */}
-      <div className="w-full max-w-[430px] min-w-[360px] h-[932px] max-h-[932px] bg-stone-50 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+      <div className="w-full max-w-[390px] h-full max-h-[844px] bg-stone-50 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         
         {/* Fixed Status Bar - stays at top */}
         <div className="h-11 bg-black text-white flex items-center justify-between px-6 text-xs flex-shrink-0">
@@ -205,14 +531,44 @@ function SyndicateMarketplace() {
         </div>
 
         {/* Scrollable Content Area - flex-1 with overflow */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+        <div 
+          className="flex-1 overflow-y-auto overflow-x-hidden bg-stone-50"
+          onScroll={screen === 'home' ? handleScroll : screen === 'listing' ? handleExploreScroll : undefined}
+        >
           
           {/* HOME SCREEN */}
           {screen === 'home' && (
             <div className="bg-stone-50">
-              <div className="bg-black text-white px-6 py-12 text-center">
-                <h1 className="text-3xl font-bold mb-2">Syndicate Marketplace</h1>
-                <p className="text-stone-300">Your B2B Business Network</p>
+              {/* Abstract Banner with Title */}
+              <div className="relative overflow-hidden px-6 py-12" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #4a4a4a 50%, #ffffff 100%)' }}>
+                {/* Abstract geometric background - CSS based */}
+                <div className="absolute inset-0 overflow-hidden opacity-20">
+                  {/* Large diagonal stripes */}
+                  <div className="absolute w-64 h-96 bg-white transform -rotate-45 -left-20 -top-10"></div>
+                  <div className="absolute w-48 h-72 bg-black transform rotate-30 right-10 -top-20"></div>
+                  
+                  {/* Medium squares */}
+                  <div className="absolute w-32 h-32 bg-white transform rotate-12 left-40 top-8"></div>
+                  <div className="absolute w-40 h-40 bg-black transform -rotate-20 right-32 bottom-10"></div>
+                  
+                  {/* Small accents */}
+                  <div className="absolute w-20 h-20 bg-white transform rotate-45 left-20 bottom-20"></div>
+                  <div className="absolute w-24 h-24 bg-black transform -rotate-30 right-16 top-24"></div>
+                  
+                  {/* Diagonal lines effect */}
+                  <div className="absolute w-full h-1 bg-white transform -rotate-12 top-16"></div>
+                  <div className="absolute w-full h-1 bg-black transform rotate-15 bottom-16"></div>
+                  
+                  {/* Triangular shapes */}
+                  <div className="absolute w-0 h-0 border-l-[60px] border-l-transparent border-r-[60px] border-r-transparent border-b-[100px] border-b-white transform rotate-25 left-64 bottom-0"></div>
+                  <div className="absolute w-0 h-0 border-l-[50px] border-l-transparent border-r-[50px] border-r-transparent border-t-[80px] border-t-black transform -rotate-40 right-20 top-8"></div>
+                </div>
+                
+                {/* Content on top of background */}
+                <div className="relative z-10 text-center">
+                  <h1 className="text-3xl font-bold mb-2 text-white drop-shadow-lg">Syndicate Marketplace</h1>
+                  <p className="text-white drop-shadow-md">Your B2B Business Network</p>
+                </div>
               </div>
 
               <div className="bg-white px-6 py-4">
@@ -232,7 +588,9 @@ function SyndicateMarketplace() {
                       onClick={() => setScreen('listing')}
                       className="bg-white border-2 border-stone-300 rounded-xl p-4 text-center cursor-pointer hover:border-black transition-all"
                     >
-                      <div className="text-2xl mb-1">🏢</div>
+                      <div className="w-12 h-12 flex items-center justify-center mx-auto mb-2">
+                        {CATEGORY_ICONS[cat]}
+                      </div>
                       <div className="text-xs font-medium text-black">{cat}</div>
                     </div>
                   ))}
@@ -240,9 +598,17 @@ function SyndicateMarketplace() {
               </div>
 
               <div className="px-6 py-6 bg-stone-50">
-                <h2 className="text-lg font-semibold mb-4 text-black">Featured Businesses</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-black">Recommended Businesses</h2>
+                  <button 
+                    onClick={() => setScreen('listing')}
+                    className="text-xs text-black font-medium hover:underline"
+                  >
+                    See More →
+                  </button>
+                </div>
                 <div className="space-y-4 mb-6">
-                  {BUSINESSES.slice(0, 2).map(business => (
+                  {featuredBusinesses.map(business => (
                     <BusinessCard 
                       key={business.id}
                       business={business}
@@ -252,24 +618,240 @@ function SyndicateMarketplace() {
                   ))}
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* LISTING SCREEN */}
-          {screen === 'listing' && (
-            <div className="bg-stone-50">
-              <Header title="Manufacturing" onBack={() => setScreen('home')} />
-              <div className="px-6 py-6">
-                <div className="space-y-4 mb-6">
-                  {BUSINESSES.map(business => (
-                    <BusinessCard 
-                      key={business.id}
-                      business={business}
-                      onNavigate={() => navigateToDetail(business)}
-                      onMessage={() => setScreen('message-form')}
+              <div className="px-6 py-6 bg-stone-50 border-t-4 border-stone-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold text-black">Recommended Products</h2>
+                  <button 
+                    onClick={() => setScreen('listing')}
+                    className="text-xs text-black font-medium hover:underline"
+                  >
+                    See More →
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {PRODUCTS.slice(0, 4).map(product => (
+                    <ProductCard 
+                      key={product.id}
+                      product={product}
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setScreen('product-detail');
+                      }}
                     />
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* LISTING/EXPLORE SCREEN */}
+          {screen === 'listing' && (
+            <div className="bg-stone-50">
+              <Header 
+                title="Explore" 
+                onBack={() => setScreen('home')}
+                action={
+                  <button 
+                    onClick={resetFilters}
+                    className="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-sm hover:bg-opacity-30"
+                  >
+                    Reset
+                  </button>
+                }
+              />
+
+              {/* Tabs */}
+              <div className="bg-white border-b border-stone-200 flex">
+                {['businesses', 'products'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setExploreTab(tab)}
+                    className={`flex-1 py-4 font-medium ${
+                      exploreTab === tab ? 'text-black border-b-2 border-black' : 'text-stone-400'
+                    }`}
+                  >
+                    {tab === 'businesses' ? 'Businesses' : 'Products'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Search Bar */}
+              <div className="bg-white px-6 py-4 border-b border-stone-200">
+                <input 
+                  type="text" 
+                  placeholder={exploreTab === 'businesses' ? 'Search businesses, locations...' : 'Search products...'}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black"
+                />
+              </div>
+
+              {/* Filters Section */}
+              <div className="bg-white px-6 py-4 border-b-4 border-stone-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-black">Filters</h3>
+                  <div className="text-xs text-stone-500">{filteredBusinesses.length} results</div>
+                </div>
+                
+                <div className="space-y-3">
+                  {/* Industry Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-600 mb-1">Industry</label>
+                    <select 
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-stone-300 rounded-lg focus:outline-none focus:border-black text-sm"
+                    >
+                      <option>All Industries</option>
+                      {CATEGORIES.map(cat => (
+                        <option key={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Location Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-600 mb-1">Location</label>
+                    <select 
+                      value={selectedLocation}
+                      onChange={(e) => setSelectedLocation(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-stone-300 rounded-lg focus:outline-none focus:border-black text-sm"
+                    >
+                      {LOCATIONS.map(loc => (
+                        <option key={loc}>{loc}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Rating Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-600 mb-1">Rating</label>
+                    <select 
+                      value={selectedRating}
+                      onChange={(e) => setSelectedRating(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-stone-300 rounded-lg focus:outline-none focus:border-black text-sm"
+                    >
+                      {RATING_FILTERS.map(rating => (
+                        <option key={rating}>{rating}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Price Range Filter */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-600 mb-1">Price Range</label>
+                    <select 
+                      value={selectedPrice}
+                      onChange={(e) => setSelectedPrice(e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-stone-300 rounded-lg focus:outline-none focus:border-black text-sm"
+                    >
+                      {PRICE_RANGES.map(price => (
+                        <option key={price}>{price}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Sort Order */}
+                  <div>
+                    <label className="block text-xs font-medium text-stone-600 mb-1">Sort By</label>
+                    <div className="flex gap-2">
+                      {[
+                        { value: 'relevance', label: 'Relevance' },
+                        { value: 'a-z', label: 'A → Z' },
+                        { value: 'z-a', label: 'Z → A' }
+                      ].map(sort => (
+                        <button
+                          key={sort.value}
+                          onClick={() => setSortOrder(sort.value)}
+                          className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                            sortOrder === sort.value
+                              ? 'bg-black text-white'
+                              : 'bg-stone-100 text-black hover:bg-stone-200'
+                          }`}
+                        >
+                          {sort.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Results */}
+              <div className="px-6 py-6">
+                {exploreTab === 'businesses' ? (
+                  filteredBusinesses.length > 0 ? (
+                    <>
+                      <div className="space-y-4 mb-6">
+                        {filteredBusinesses.map(business => (
+                          <BusinessCard 
+                            key={business.id}
+                            business={business}
+                            onNavigate={() => navigateToDetail(business)}
+                            onMessage={() => setScreen('message-form')}
+                          />
+                        ))}
+                      </div>
+                      {isExploreLoading && (
+                        <div className="text-center py-4">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+                        </div>
+                      )}
+                      {visibleExploreCount >= BUSINESSES.length && (
+                        <div className="text-center py-4 text-stone-500 text-sm">
+                          You've reached the end
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12">
+                      <svg className="w-16 h-16 mx-auto mb-4" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      <h3 className="text-lg font-semibold text-black mb-2">No results found</h3>
+                      <p className="text-stone-500 text-sm mb-4">Try adjusting your filters</p>
+                      <button 
+                        onClick={resetFilters}
+                        className="bg-black text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-stone-800"
+                      >
+                        Clear Filters
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  /* Products Tab */
+                  PRODUCTS.length > 0 ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3 mb-6">
+                        {PRODUCTS.slice(0, visibleExploreCount).map(product => (
+                          <ProductCard 
+                            key={product.id}
+                            product={product}
+                            onClick={() => {
+                              setSelectedProduct(product);
+                              setScreen('product-detail');
+                            }}
+                          />
+                        ))}
+                      </div>
+                      {isExploreLoading && (
+                        <div className="text-center py-4">
+                          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
+                        </div>
+                      )}
+                      {visibleExploreCount >= PRODUCTS.length && (
+                        <div className="text-center py-4 text-stone-500 text-sm">
+                          You've reached the end
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12">
+                      <svg className="w-16 h-16 mx-auto mb-4" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      <h3 className="text-lg font-semibold text-black mb-2">No products found</h3>
+                      <p className="text-stone-500 text-sm">Check back later for new products</p>
+                    </div>
+                  )
+                )}
               </div>
             </div>
           )}
@@ -285,7 +867,11 @@ function SyndicateMarketplace() {
                 </div>
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <h2 className="text-2xl font-bold">{selectedBusiness.name}</h2>
-                  {selectedBusiness.verified && <span className="text-xl">✓</span>}
+                  {selectedBusiness.verified && (
+                    <span className="bg-white text-black px-2 py-1 rounded text-xs font-medium">
+                      Verified
+                    </span>
+                  )}
                 </div>
                 <p className="text-center text-stone-300 mb-6">{selectedBusiness.category}</p>
                 <div className="flex justify-around mb-6">
@@ -301,17 +887,27 @@ function SyndicateMarketplace() {
                   ))}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <button className="w-full bg-white bg-opacity-20 text-white px-4 py-3 rounded-xl font-medium border border-white border-opacity-30">
-                    📞 Call
+                  <button className="w-full bg-white bg-opacity-20 text-white px-4 py-3 rounded-xl font-medium border border-white border-opacity-30 flex items-center justify-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                    </svg>
+                    Call
                   </button>
-                  <button className="w-full bg-white bg-opacity-20 text-white px-4 py-3 rounded-xl font-medium border border-white border-opacity-30">
-                    ✉️ Email
+                  <button className="w-full bg-white bg-opacity-20 text-white px-4 py-3 rounded-xl font-medium border border-white border-opacity-30 flex items-center justify-center gap-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                      <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    Email
                   </button>
                   <button 
                     onClick={() => setScreen('message-form')}
-                    className="w-full bg-white text-black px-4 py-3 rounded-xl font-medium hover:bg-stone-100"
+                    className="w-full bg-white text-black px-4 py-3 rounded-xl font-medium hover:bg-stone-100 flex items-center justify-center gap-2"
                   >
-                    💬 Message
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Message
                   </button>
                 </div>
               </div>
@@ -326,7 +922,10 @@ function SyndicateMarketplace() {
                     <ProductCard 
                       key={product.id}
                       product={product}
-                      onClick={() => setScreen('message-form')}
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setScreen('product-detail');
+                      }}
                     />
                   ))}
                 </div>
@@ -342,7 +941,6 @@ function SyndicateMarketplace() {
                         <div>
                           <div className="flex items-center gap-2 mb-1">
                             <div className="font-semibold text-sm text-black">{review.name}</div>
-                            <span className="text-black text-xs">✓</span>
                           </div>
                           <div className="text-black text-xs">{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</div>
                         </div>
@@ -363,6 +961,162 @@ function SyndicateMarketplace() {
             </div>
           )}
 
+          {/* PRODUCT DETAIL SCREEN */}
+          {screen === 'product-detail' && selectedProduct && (
+            <div className="bg-stone-50">
+              <Header title="Product Details" onBack={() => setScreen('detail')} />
+              
+              <div className="px-6 py-6">
+                {/* Product Image and Name */}
+                <div className="mb-6">
+                  <div 
+                    className="aspect-square rounded-xl overflow-hidden mb-4"
+                    style={{ background: selectedProduct.gradient }}
+                  />
+                  <h2 className="text-2xl font-bold text-black mb-2 text-center">{selectedProduct.name}</h2>
+                  <div className="text-3xl font-bold text-black text-center">{selectedProduct.price}</div>
+                </div>
+
+                {/* Product Description */}
+                <div className="bg-white rounded-xl p-4 border border-stone-200 mb-4">
+                  <h3 className="font-semibold text-black mb-2">Description</h3>
+                  <p className="text-sm text-stone-700">
+                    High-quality product with advanced features and reliable performance. Perfect for professional and commercial applications.
+                  </p>
+                </div>
+
+                {/* Manufacturer Snapshot */}
+                <div 
+                  onClick={() => {
+                    setSelectedBusiness(BUSINESSES[0]);
+                    setScreen('detail');
+                  }}
+                  className="bg-white rounded-xl p-4 border border-stone-200 mb-4 cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  <h3 className="font-semibold text-black mb-3">Sold by</h3>
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-stone-800 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+                      {BUSINESSES[0].logo}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-semibold text-black">{BUSINESSES[0].name}</span>
+                        {BUSINESSES[0].verified && (
+                          <span className="bg-black text-white px-2 py-0.5 rounded text-xs font-medium">
+                            Verified
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-stone-600">{BUSINESSES[0].category}</div>
+                      <div className="text-xs text-black">{'★'.repeat(BUSINESSES[0].rating)}{'☆'.repeat(5-BUSINESSES[0].rating)} ({BUSINESSES[0].reviews})</div>
+                    </div>
+                    <div className="text-stone-400">→</div>
+                  </div>
+                </div>
+
+                {/* Product Video */}
+                {selectedProduct.videoUrl && (
+                  <div className="bg-white rounded-xl p-4 border border-stone-200 mb-4">
+                    <h3 className="font-semibold text-black mb-2">Product Video</h3>
+                    <div className="aspect-video bg-stone-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    </div>
+                  </div>
+                )}
+
+                {/* Product Variations */}
+                {selectedProduct.variations && selectedProduct.variations.length > 0 && (
+                  <div className="bg-white rounded-xl p-4 border border-stone-200 mb-4">
+                    <h3 className="font-semibold text-black mb-3">Available Variations</h3>
+                    <div className="space-y-2">
+                      {selectedProduct.variations.map((variation, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 bg-stone-50 rounded-lg">
+                          <span className="font-medium text-black">{variation.name}</span>
+                          <span className="font-bold text-black">${variation.price}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Tiered Pricing */}
+                {selectedProduct.tieredPricing && selectedProduct.tieredPricing.length > 1 && (
+                  <div className="bg-white rounded-xl p-4 border border-stone-200 mb-4">
+                    <h3 className="font-semibold text-black mb-3">💰 Bulk Pricing</h3>
+                    <div className="space-y-2">
+                      {selectedProduct.tieredPricing.map((tier, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                          <span className="text-sm text-black">
+                            {tier.min} - {tier.max ? tier.max : '∞'} units
+                          </span>
+                          <span className="font-bold text-black">${tier.price} each</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 text-xs text-stone-500">
+                      Save more when you buy in bulk!
+                    </div>
+                  </div>
+                )}
+
+                {/* Product Features/Specs */}
+                <div className="bg-white rounded-xl p-4 border border-stone-200 mb-4">
+                  <h3 className="font-semibold text-black mb-3">Specifications</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-stone-600">Status</span>
+                      <span className="text-black font-medium">{selectedProduct.status}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-stone-600">Sales</span>
+                      <span className="text-black font-medium">{selectedProduct.sales} units</span>
+                    </div>
+                    {selectedProduct.directSales && (
+                      <div className="flex justify-between">
+                        <span className="text-stone-600">Purchase</span>
+                        <span className="text-black font-medium">Direct Sales Available</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="space-y-3">
+                  {selectedProduct.directSales ? (
+                    <button className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800 flex items-center justify-center gap-2">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                      </svg>
+                      Buy Now
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => setScreen('message-form')}
+                      className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800 flex items-center justify-center gap-2"
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                      </svg>
+                      Request Quote
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => setScreen('message-form')}
+                    className="w-full bg-white border-2 border-black text-black py-3 rounded-xl font-semibold hover:bg-black hover:text-white transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Contact Seller
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* MESSAGES SCREEN */}
           {screen === 'messages' && (
             <div className="bg-stone-50">
@@ -378,7 +1132,7 @@ function SyndicateMarketplace() {
             <div className="bg-stone-50">
               <Header title="New Message" onBack={() => setScreen('detail')} />
               <div className="px-6 py-6">
-                <form onSubmit={(e) => { e.preventDefault(); setScreen('success'); }}>
+                <div onSubmit={(e) => { e.preventDefault(); setScreen('success'); }}>
                   <div className="mb-4">
                     <label className="block font-medium mb-2 text-black">To</label>
                     <input type="text" defaultValue={selectedBusiness.name} readOnly className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl bg-stone-100" />
@@ -395,10 +1149,10 @@ function SyndicateMarketplace() {
                     <label className="block font-medium mb-2 text-black">Message</label>
                     <textarea required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"></textarea>
                   </div>
-                  <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
+                  <button onClick={() => setScreen('success')} className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
                     Send Message
                   </button>
-                </form>
+                </div>
               </div>
             </div>
           )}
@@ -448,7 +1202,7 @@ function SyndicateMarketplace() {
             <div className="bg-stone-50">
               <Header title="Create RFQ" onBack={() => setScreen('rfqs')} />
               <div className="px-6 py-6">
-                <form onSubmit={(e) => { e.preventDefault(); setScreen('success'); }}>
+                <div onSubmit={(e) => { e.preventDefault(); setScreen('success'); }}>
                   {[
                     { label: 'Your Name', type: 'text', placeholder: 'Enter your name' },
                     { label: 'Company', type: 'text', placeholder: 'Your company name' },
@@ -471,14 +1225,14 @@ function SyndicateMarketplace() {
                   <div className="mb-4">
                     <label className="block font-medium mb-2 text-black">Attachments (Optional)</label>
                     <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center">
-                      <div className="text-3xl mb-2">📎</div>
+                      <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg><div className="text-sm text-stone-600">Click to upload files</div>
                       <div className="text-sm text-stone-600">Click to upload files</div>
                     </div>
                   </div>
-                  <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
+                  <button onClick={() => setScreen('success')} className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
                     Submit Request
                   </button>
-                </form>
+                </div>
               </div>
             </div>
           )}
@@ -493,7 +1247,11 @@ function SyndicateMarketplace() {
                 </div>
                 <h2 className="text-xl font-bold mb-1 text-black">My Business Inc.</h2>
                 <p className="text-stone-500 mb-3">Technology Vendor</p>
-                <span className="bg-stone-200 text-black px-3 py-1 rounded-lg text-sm font-medium">Free Plan</span>
+                <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                  isProMember ? 'bg-black text-white' : 'bg-stone-200 text-black'
+                }`}>
+                  {isProMember ? 'Pro Member' : 'Free Plan'}
+                </span>
               </div>
               <div className="px-6 pb-6">
                 <div className="bg-white rounded-xl p-5 mb-5 border border-stone-200">
@@ -515,16 +1273,23 @@ function SyndicateMarketplace() {
                   onClick={() => setScreen('subscription')}
                   className="w-full bg-black text-white py-3 rounded-xl font-semibold mb-4 hover:bg-stone-800"
                 >
-                  Upgrade to Pro 🚀
+                  Upgrade to Pro
                 </button>
                 <div className="space-y-3 mb-6">
-                  {['Manage Products', 'Settings'].map((item, i) => (
+                  {[
+                    { label: 'Manage Profile', screen: 'manage-profile' },
+                    { label: 'Manage Products', screen: 'manage-products' },
+                    { label: 'App Settings', screen: 'settings' }
+                  ].map((item, i) => (
                     <div 
                       key={i}
-                      onClick={() => item === 'Manage Products' && setScreen('manage-products')}
-                      className="bg-white rounded-xl p-4 text-center border border-stone-200 cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => setScreen(item.screen)}
+                      className="bg-white rounded-xl p-4 border border-stone-200 cursor-pointer hover:shadow-md transition-shadow"
                     >
-                      <div className="font-medium text-black">{item}</div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-black">{item.label}</span>
+                        <span className="text-stone-400">→</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -552,9 +1317,10 @@ function SyndicateMarketplace() {
                   {PRODUCTS.map(product => (
                     <div key={product.id} className="bg-white rounded-xl p-4 border border-stone-200">
                       <div className="flex gap-3">
-                        <div className="w-16 h-16 bg-stone-100 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
-                          {product.icon}
-                        </div>
+                        <div 
+                          className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0"
+                          style={{ background: product.gradient }}
+                        />
                         <div className="flex-1 min-w-0">
                           <div className="flex justify-between items-start mb-1">
                             <div className="flex-1 min-w-0">
@@ -569,7 +1335,13 @@ function SyndicateMarketplace() {
                           </div>
                           <div className="text-xs text-stone-400 mb-2">{product.sales} sales</div>
                           <div className="flex gap-2">
-                            <button className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-stone-800">
+                            <button 
+                              onClick={() => {
+                                setEditingProduct(product);
+                                setScreen('edit-product');
+                              }}
+                              className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-stone-800"
+                            >
                               Edit
                             </button>
                             <button className="px-3 py-1.5 bg-stone-100 text-black rounded-lg text-xs font-medium hover:bg-stone-200">
@@ -591,27 +1363,668 @@ function SyndicateMarketplace() {
               <Header title="Add Product" onBack={() => setScreen('manage-products')} />
               <div className="px-6 py-6">
                 <form onSubmit={(e) => { e.preventDefault(); setScreen('manage-products'); }}>
+                  
+                  {/* Product Name */}
                   <div className="mb-4">
                     <label className="block font-medium mb-2 text-black">Product Name</label>
-                    <input type="text" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
+                    <input 
+                      type="text" 
+                      value={newProduct.name}
+                      onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                    />
                   </div>
+
+                  {/* Product Images */}
                   <div className="mb-4">
                     <label className="block font-medium mb-2 text-black">Product Images</label>
                     <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center">
-                      <div className="text-3xl mb-2">📷</div>
+                      <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg><div className="text-sm text-stone-600">Upload product images</div>
                       <div className="text-sm text-stone-600">Upload product images</div>
                     </div>
                   </div>
+
+                  {/* Product Video - Pro Only */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Product Video</label>
+                    {isProMember ? (
+                      <input 
+                        type="url" 
+                        value={newProduct.videoUrl}
+                        onChange={(e) => setNewProduct({...newProduct, videoUrl: e.target.value})}
+                        placeholder="https://youtube.com/..."
+                        className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                      />
+                    ) : (
+                      <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center bg-stone-100">
+                        <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <div className="text-sm text-stone-600 mb-2">Pro Feature</div>
+                        <button 
+                          type="button"
+                          onClick={() => setScreen('subscription')}
+                          className="text-black text-sm font-medium underline hover:no-underline"
+                        >
+                          Upgrade to unlock
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description */}
                   <div className="mb-4">
                     <label className="block font-medium mb-2 text-black">Description</label>
-                    <textarea required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"></textarea>
+                    <textarea 
+                      value={newProduct.description}
+                      onChange={(e) => setNewProduct({...newProduct, description: e.target.value})}
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"
+                    ></textarea>
                   </div>
+
+                  {/* Base Price */}
                   <div className="mb-4">
-                    <label className="block font-medium mb-2 text-black">Base Price</label>
-                    <input type="text" placeholder="$299" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
+                    <label className="block font-medium mb-2 text-black">Base Price ($)</label>
+                    <input 
+                      type="number" 
+                      value={newProduct.basePrice}
+                      onChange={(e) => setNewProduct({...newProduct, basePrice: e.target.value})}
+                      placeholder="299" 
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                    />
                   </div>
+
+                  {/* Tiered Pricing */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Tiered Pricing</label>
+                    <div className="space-y-3">
+                      {newProduct.tieredPricing.map((tier, index) => (
+                        <div key={index} className="bg-white rounded-xl p-4 border border-stone-200">
+                          <div className="grid grid-cols-3 gap-2 mb-2">
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Min Qty</label>
+                              <input 
+                                type="number" 
+                                value={tier.min}
+                                onChange={(e) => {
+                                  const updated = [...newProduct.tieredPricing];
+                                  updated[index].min = parseInt(e.target.value);
+                                  setNewProduct({...newProduct, tieredPricing: updated});
+                                }}
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Max Qty</label>
+                              <input 
+                                type="number" 
+                                value={tier.max || ''}
+                                onChange={(e) => {
+                                  const updated = [...newProduct.tieredPricing];
+                                  updated[index].max = e.target.value ? parseInt(e.target.value) : null;
+                                  setNewProduct({...newProduct, tieredPricing: updated});
+                                }}
+                                placeholder="∞"
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Price ($)</label>
+                              <input 
+                                type="number" 
+                                value={tier.price}
+                                onChange={(e) => {
+                                  const updated = [...newProduct.tieredPricing];
+                                  updated[index].price = e.target.value;
+                                  setNewProduct({...newProduct, tieredPricing: updated});
+                                }}
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                          </div>
+                          {index > 0 && (
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const updated = newProduct.tieredPricing.filter((_, i) => i !== index);
+                                setNewProduct({...newProduct, tieredPricing: updated});
+                              }}
+                              className="text-red-600 text-xs hover:underline"
+                            >
+                              Remove tier
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          const lastTier = newProduct.tieredPricing[newProduct.tieredPricing.length - 1];
+                          const newMin = lastTier.max ? lastTier.max + 1 : lastTier.min + 10;
+                          setNewProduct({
+                            ...newProduct, 
+                            tieredPricing: [...newProduct.tieredPricing, { min: newMin, max: null, price: '' }]
+                          });
+                        }}
+                        className="w-full bg-stone-100 text-black py-2 rounded-lg text-sm font-medium hover:bg-stone-200"
+                      >
+                        + Add Price Tier
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Product Variations */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Product Variations</label>
+                    <div className="space-y-3">
+                      {newProduct.variations.map((variation, index) => (
+                        <div key={index} className="bg-white rounded-xl p-4 border border-stone-200">
+                          <div className="grid grid-cols-2 gap-2 mb-2">
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Name</label>
+                              <input 
+                                type="text" 
+                                value={variation.name}
+                                onChange={(e) => {
+                                  const updated = [...newProduct.variations];
+                                  updated[index].name = e.target.value;
+                                  setNewProduct({...newProduct, variations: updated});
+                                }}
+                                placeholder="e.g., Standard, Advanced"
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Price ($)</label>
+                              <input 
+                                type="number" 
+                                value={variation.price}
+                                onChange={(e) => {
+                                  const updated = [...newProduct.variations];
+                                  updated[index].price = e.target.value;
+                                  setNewProduct({...newProduct, variations: updated});
+                                }}
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                          </div>
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              const updated = newProduct.variations.filter((_, i) => i !== index);
+                              setNewProduct({...newProduct, variations: updated});
+                            }}
+                            className="text-red-600 text-xs hover:underline"
+                          >
+                            Remove variation
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          setNewProduct({
+                            ...newProduct, 
+                            variations: [...newProduct.variations, { name: '', price: '' }]
+                          });
+                        }}
+                        className="w-full bg-stone-100 text-black py-2 rounded-lg text-sm font-medium hover:bg-stone-200"
+                      >
+                        + Add Variation
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Direct Sales - Pro Only */}
+                  <div className="mb-6">
+                    <label className="block font-medium mb-2 text-black">Sell Directly on Marketplace</label>
+                    {isProMember ? (
+                      <div className="bg-white rounded-xl p-4 border border-stone-200">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input 
+                            type="checkbox"
+                            checked={newProduct.directSales}
+                            onChange={(e) => setNewProduct({...newProduct, directSales: e.target.checked})}
+                            className="w-5 h-5 rounded"
+                          />
+                          <div>
+                            <div className="font-medium text-black">Enable Direct Sales</div>
+                            <div className="text-xs text-stone-500">Allow buyers to purchase directly through the marketplace</div>
+                          </div>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center bg-stone-100">
+                        <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <div className="text-sm text-stone-600 mb-2">Pro Feature</div>
+                        <button 
+                          type="button"
+                          onClick={() => setScreen('subscription')}
+                          className="text-black text-sm font-medium underline hover:no-underline"
+                        >
+                          Upgrade to unlock
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
                     Add Product
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* EDIT PRODUCT SCREEN */}
+          {screen === 'edit-product' && editingProduct && (
+            <div className="bg-stone-50">
+              <Header title="Edit Product" onBack={() => setScreen('manage-products')} />
+              <div className="px-6 py-6">
+                <form onSubmit={(e) => { e.preventDefault(); setScreen('manage-products'); }}>
+                  
+                  {/* Product Name */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Product Name</label>
+                    <input 
+                      type="text" 
+                      defaultValue={editingProduct.name}
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                    />
+                  </div>
+
+                  {/* Product Images */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Product Images</label>
+                    <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center">
+                      <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg><div className="text-sm text-stone-600">Upload product images</div>
+                      <div className="text-sm text-stone-600">Upload product images</div>
+                    </div>
+                  </div>
+
+                  {/* Product Video - Pro Only */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Product Video</label>
+                    {isProMember ? (
+                      <input 
+                        type="url" 
+                        defaultValue={editingProduct.videoUrl}
+                        placeholder="https://youtube.com/..."
+                        className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                      />
+                    ) : (
+                      <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center bg-stone-100">
+                        <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <div className="text-sm text-stone-600 mb-2">Pro Feature</div>
+                        <button 
+                          type="button"
+                          onClick={() => setScreen('subscription')}
+                          className="text-black text-sm font-medium underline hover:no-underline"
+                        >
+                          Upgrade to unlock
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Description */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Description</label>
+                    <textarea 
+                      defaultValue="High-quality product with advanced features."
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"
+                    ></textarea>
+                  </div>
+
+                  {/* Base Price */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Base Price ($)</label>
+                    <input 
+                      type="number" 
+                      defaultValue={editingProduct.price.replace('$', '')}
+                      placeholder="299" 
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                    />
+                  </div>
+
+                  {/* Tiered Pricing */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Tiered Pricing</label>
+                    <div className="space-y-3">
+                      {editingProduct.tieredPricing.map((tier, index) => (
+                        <div key={index} className="bg-white rounded-xl p-4 border border-stone-200">
+                          <div className="grid grid-cols-3 gap-2 mb-2">
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Min Qty</label>
+                              <input 
+                                type="number" 
+                                defaultValue={tier.min}
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Max Qty</label>
+                              <input 
+                                type="number" 
+                                defaultValue={tier.max || ''}
+                                placeholder="∞"
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Price ($)</label>
+                              <input 
+                                type="number" 
+                                defaultValue={tier.price}
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                          </div>
+                          {index > 0 && (
+                            <button 
+                              type="button"
+                              className="text-red-600 text-xs hover:underline"
+                            >
+                              Remove tier
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button 
+                        type="button"
+                        className="w-full bg-stone-100 text-black py-2 rounded-lg text-sm font-medium hover:bg-stone-200"
+                      >
+                        + Add Price Tier
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Product Variations */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Product Variations</label>
+                    <div className="space-y-3">
+                      {editingProduct.variations.map((variation, index) => (
+                        <div key={index} className="bg-white rounded-xl p-4 border border-stone-200">
+                          <div className="grid grid-cols-2 gap-2 mb-2">
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Name</label>
+                              <input 
+                                type="text" 
+                                defaultValue={variation.name}
+                                placeholder="e.g., Standard, Advanced"
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-stone-600 mb-1">Price ($)</label>
+                              <input 
+                                type="number" 
+                                defaultValue={variation.price}
+                                className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+                              />
+                            </div>
+                          </div>
+                          <button 
+                            type="button"
+                            className="text-red-600 text-xs hover:underline"
+                          >
+                            Remove variation
+                          </button>
+                        </div>
+                      ))}
+                      <button 
+                        type="button"
+                        className="w-full bg-stone-100 text-black py-2 rounded-lg text-sm font-medium hover:bg-stone-200"
+                      >
+                        + Add Variation
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Direct Sales - Pro Only */}
+                  <div className="mb-6">
+                    <label className="block font-medium mb-2 text-black">Sell Directly on Marketplace</label>
+                    {isProMember ? (
+                      <div className="bg-white rounded-xl p-4 border border-stone-200">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input 
+                            type="checkbox"
+                            defaultChecked={editingProduct.directSales}
+                            className="w-5 h-5 rounded"
+                          />
+                          <div>
+                            <div className="font-medium text-black">Enable Direct Sales</div>
+                            <div className="text-xs text-stone-500">Allow buyers to purchase directly through the marketplace</div>
+                          </div>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center bg-stone-100">
+                        <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <div className="text-sm text-stone-600 mb-2">Pro Feature</div>
+                        <button 
+                          type="button"
+                          onClick={() => setScreen('subscription')}
+                          className="text-black text-sm font-medium underline hover:no-underline"
+                        >
+                          Upgrade to unlock
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
+                    Save Changes
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* APP SETTINGS SCREEN */}
+          {screen === 'settings' && (
+            <div className="bg-stone-50">
+              <Header title="App Settings" onBack={() => setScreen('profile')} />
+              <div className="px-6 py-6">
+                <div className="space-y-3 mb-6">
+                  {[
+                    { label: 'Notifications', screen: null },
+                    { label: 'Privacy & Security', screen: null },
+                    { label: 'Language', screen: null },
+                    { label: 'Dark Mode', screen: null },
+                    { label: 'Help & Support', screen: null },
+                    { label: 'Terms of Service', screen: null },
+                    { label: 'About', screen: null }
+                  ].map((item, i) => (
+                    <div 
+                      key={i}
+                      onClick={() => item.screen && setScreen(item.screen)}
+                      className="bg-white rounded-xl p-4 border border-stone-200 cursor-pointer hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-black">{item.label}</span>
+                        <span className="text-stone-400">→</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MANAGE PROFILE SCREEN */}
+          {screen === 'manage-profile' && (
+            <div className="bg-stone-50">
+              <Header title="Manage Profile" onBack={() => setScreen('profile')} />
+              <div className="px-6 py-6">
+                <form onSubmit={(e) => { e.preventDefault(); setScreen('profile'); }}>
+                  
+                  {/* Profile Banner - Pro Only */}
+                  <div className="mb-6">
+                    <label className="block font-medium mb-2 text-black">Profile Banner</label>
+                    {isProMember ? (
+                      <div>
+                        <div 
+                          className="w-full h-32 rounded-xl mb-2 flex items-center justify-center text-white text-sm"
+                          style={{ backgroundColor: userProfile.bannerColor }}
+                        >
+                          Banner Preview
+                        </div>
+                        <input 
+                          type="color" 
+                          value={userProfile.bannerColor}
+                          onChange={(e) => setUserProfile({...userProfile, bannerColor: e.target.value})}
+                          className="w-full h-10 rounded-lg cursor-pointer" 
+                        />
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-stone-300 rounded-xl p-8 text-center bg-stone-100">
+                        <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <div className="text-sm text-stone-600 mb-2">Pro Feature</div>
+                        <button 
+                          type="button"
+                          onClick={() => setScreen('subscription')}
+                          className="text-black text-sm font-medium underline hover:no-underline"
+                        >
+                          Upgrade to unlock
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Business Logo */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Business Logo</label>
+                    <div className="flex items-center gap-4">
+                      <div className="w-20 h-20 bg-stone-800 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+                        {userProfile.logo}
+                      </div>
+                      <div className="flex-1">
+                        <input 
+                          type="text" 
+                          value={userProfile.logo}
+                          onChange={(e) => setUserProfile({...userProfile, logo: e.target.value.slice(0, 2).toUpperCase()})}
+                          maxLength="2"
+                          placeholder="MB"
+                          className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                        />
+                        <div className="text-xs text-stone-500 mt-1">Enter 2 letters for your logo</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Business Name */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Business Name</label>
+                    <input 
+                      type="text" 
+                      value={userProfile.businessName}
+                      onChange={(e) => setUserProfile({...userProfile, businessName: e.target.value})}
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                    />
+                  </div>
+
+                  {/* Category */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Category</label>
+                    <select 
+                      value={userProfile.category}
+                      onChange={(e) => setUserProfile({...userProfile, category: e.target.value})}
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black"
+                    >
+                      {CATEGORIES.map(cat => (
+                        <option key={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Email */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Email</label>
+                    <input 
+                      type="email" 
+                      value={userProfile.email}
+                      onChange={(e) => setUserProfile({...userProfile, email: e.target.value})}
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Phone</label>
+                    <input 
+                      type="tel" 
+                      value={userProfile.phone}
+                      onChange={(e) => setUserProfile({...userProfile, phone: e.target.value})}
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                    />
+                  </div>
+
+                  {/* Website */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Website</label>
+                    <input 
+                      type="text" 
+                      value={userProfile.website}
+                      onChange={(e) => setUserProfile({...userProfile, website: e.target.value})}
+                      placeholder="www.example.com"
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                    />
+                  </div>
+
+                  {/* Description */}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Business Description</label>
+                    <textarea 
+                      value={userProfile.description}
+                      onChange={(e) => setUserProfile({...userProfile, description: e.target.value})}
+                      required 
+                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"
+                    ></textarea>
+                  </div>
+
+                  {/* Custom Pages - Pro Only */}
+                  <div className="mb-6">
+                    <label className="block font-medium mb-2 text-black">Custom Pages</label>
+                    {isProMember ? (
+                      <div className="space-y-3">
+                        <div className="bg-white rounded-xl p-4 border border-stone-200">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-black">About Us</span>
+                            <button type="button" className="text-black text-sm hover:underline">Edit</button>
+                          </div>
+                        </div>
+                        <button 
+                          type="button"
+                          className="w-full bg-stone-100 text-black py-3 rounded-xl font-medium hover:bg-stone-200"
+                        >
+                          + Add Custom Page
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-stone-300 rounded-xl p-8 text-center bg-stone-100">
+                        <svg className="w-12 h-12 mx-auto mb-3" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <div className="text-sm text-stone-600 mb-2">Pro Feature</div>
+                        <button 
+                          type="button"
+                          onClick={() => setScreen('subscription')}
+                          className="text-black text-sm font-medium underline hover:no-underline"
+                        >
+                          Upgrade to unlock
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
+                    Save Changes
                   </button>
                 </form>
               </div>
@@ -641,13 +2054,22 @@ function SyndicateMarketplace() {
                     <ul className="space-y-2 mb-5">
                       {plan.features.map((f, j) => (
                         <li key={j} className="flex items-start gap-2 text-sm text-black">
-                          <span className="text-green-600 text-lg">✓</span>
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0 mt-0.5">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                          </svg>
                           <span>{f}</span>
                         </li>
                       ))}
                     </ul>
                     <button 
-                      onClick={() => !plan.current && setScreen('success')}
+                      onClick={() => {
+                        if (!plan.current) {
+                          if (plan.name !== 'Free Plan') {
+                            setIsProMember(true);
+                          }
+                          setScreen('success');
+                        }
+                      }}
                       className={`w-full py-3 rounded-xl font-semibold ${
                         plan.current 
                           ? 'border-2 border-black text-black' 
@@ -666,7 +2088,7 @@ function SyndicateMarketplace() {
           {screen === 'success' && (
             <div className="min-h-full flex items-center justify-center px-6 bg-stone-50">
               <div className="text-center">
-                <div className="text-7xl mb-6">✓</div>
+                <div className="w-16 h-16 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-6"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
                 <h2 className="text-2xl font-bold text-black mb-3">Success!</h2>
                 <p className="text-stone-600 mb-8">Your request has been submitted.</p>
                 <button 
@@ -684,26 +2106,74 @@ function SyndicateMarketplace() {
         <div className="bg-white border-t border-stone-300 flex-shrink-0">
           <div className="flex justify-around py-3">
             {[
-              { id: 'home', icon: '🏠', label: 'Home' },
-              { id: 'listing', icon: '🔍', label: 'Explore' },
-              { id: 'rfqs', icon: '📋', label: 'RFQs' },
-              { id: 'messages', icon: '💬', label: 'Messages', badge: unreadCount },
-              { id: 'profile', icon: '👤', label: 'Profile' }
+              { 
+                id: 'home', 
+                icon: (active) => (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? "black" : "#a8a29e"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
+                ), 
+                label: 'Home' 
+              },
+              { 
+                id: 'listing', 
+                icon: (active) => (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? "black" : "#a8a29e"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                  </svg>
+                ), 
+                label: 'Explore' 
+              },
+              { 
+                id: 'rfqs', 
+                icon: (active) => (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? "black" : "#a8a29e"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                ), 
+                label: 'RFQs' 
+              },
+              { 
+                id: 'messages', 
+                icon: (active) => (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? "black" : "#a8a29e"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                ), 
+                label: 'Messages', 
+                badge: unreadCount 
+              },
+              { 
+                id: 'profile', 
+                icon: (active) => (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={active ? "black" : "#a8a29e"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                  </svg>
+                ), 
+                label: 'Profile' 
+              }
             ].map(nav => (
               <button
                 key={nav.id}
                 onClick={() => setScreen(nav.id)}
-                className={`flex flex-col items-center gap-1 px-3 py-2 relative ${screen === nav.id ? 'text-black' : 'text-stone-400'}`}
+                className={`flex flex-col items-center gap-1 px-3 py-2 relative`}
               >
-                <div className="text-2xl relative">
-                  {nav.icon}
+                <div className="relative">
+                  {nav.icon(screen === nav.id)}
                   {nav.badge > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
                       {nav.badge}
                     </span>
                   )}
                 </div>
-                <div className="text-xs font-medium">{nav.label}</div>
+                <div className={`text-xs font-medium ${screen === nav.id ? 'text-black' : 'text-stone-400'}`}>{nav.label}</div>
               </button>
             ))}
           </div>
@@ -712,8 +2182,11 @@ function SyndicateMarketplace() {
     </div>
   );
 }
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<SyndicateMarketplace />);
+
+
+// Root render
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<SyndicateMarketplace />);
   </script>
 </body>
 </html>
