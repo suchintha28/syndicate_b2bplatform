@@ -712,7 +712,8 @@ function SyndicateMarketplace() {
     </div>
   );
 }
-    ReactDOM.render(<SyndicateMarketplace />, document.getElementById('root'));
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<SyndicateMarketplace />);
   </script>
 </body>
 </html>
