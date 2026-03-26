@@ -11,686 +11,707 @@
 </head>
 <body>
   <div id="root"></div>
-
   <script type="text/babel">
-    const { useState } = React;
+const { useState } = React;
 
-    // Data
-    const BUSINESSES = [
-      { id: 1, logo: 'TM', name: 'TechMakers Inc.', category: 'Technology', rating: 5, reviews: 48, description: 'Leading provider of custom electronics and IoT solutions.', verified: true },
-      { id: 2, logo: 'GP', name: 'GlobalPack Solutions', category: 'Packaging', rating: 4, reviews: 32, description: 'Sustainable packaging solutions for businesses.', verified: true },
-      { id: 3, logo: 'IC', name: 'InnoConstruct Ltd.', category: 'Construction', rating: 5, reviews: 67, description: 'Commercial construction with green building focus.', verified: true }
-    ];
+// Data
+const BUSINESSES = [
+  { id: 1, logo: 'TM', name: 'TechMakers Inc.', category: 'Technology', rating: 5, reviews: 48, description: 'Leading provider of custom electronics and IoT solutions.', verified: true },
+  { id: 2, logo: 'GP', name: 'GlobalPack Solutions', category: 'Packaging', rating: 4, reviews: 32, description: 'Sustainable packaging solutions for businesses.', verified: true },
+  { id: 3, logo: 'IC', name: 'InnoConstruct Ltd.', category: 'Construction', rating: 5, reviews: 67, description: 'Commercial construction with green building focus.', verified: true }
+];
 
-    const PRODUCTS = [
-      { id: 1, name: 'Smart Sensor Pro', price: '$299', icon: '📱', status: 'Active', sales: 24 },
-      { id: 2, name: 'IoT Gateway Plus', price: '$499', icon: '🔌', status: 'Active', sales: 18 },
-      { id: 3, name: 'LED Controller', price: '$149', icon: '💡', status: 'Active', sales: 42 },
-      { id: 4, name: 'Power Module V2', price: '$199', icon: '🔋', status: 'Draft', sales: 0 },
-      { id: 5, name: 'Wireless Sensor', price: '$399', icon: '📡', status: 'Active', sales: 15 }
-    ];
+const PRODUCTS = [
+  { id: 1, name: 'Smart Sensor Pro', price: '$299', icon: '📱', status: 'Active', sales: 24 },
+  { id: 2, name: 'IoT Gateway Plus', price: '$499', icon: '🔌', status: 'Active', sales: 18 },
+  { id: 3, name: 'LED Controller', price: '$149', icon: '💡', status: 'Active', sales: 42 },
+  { id: 4, name: 'Power Module V2', price: '$199', icon: '🔋', status: 'Draft', sales: 0 },
+  { id: 5, name: 'Wireless Sensor', price: '$399', icon: '📡', status: 'Active', sales: 15 }
+];
 
-    const MESSAGES = [
-      { id: 1, business: 'TechMakers Inc.', msg: 'Thank you for your interest!', time: '2h ago', unread: true, avatar: 'TM' },
-      { id: 2, business: 'GlobalPack Solutions', msg: 'We can provide a quote by tomorrow', time: '1d ago', unread: true, avatar: 'GP' },
-      { id: 3, business: 'InnoConstruct Ltd.', msg: 'The project timeline looks good', time: '3d ago', unread: false, avatar: 'IC' }
-    ];
+const MESSAGES = [
+  { id: 1, business: 'TechMakers Inc.', msg: 'Thank you for your interest!', time: '2h ago', unread: true, avatar: 'TM' },
+  { id: 2, business: 'GlobalPack Solutions', msg: 'We can provide a quote by tomorrow', time: '1d ago', unread: true, avatar: 'GP' },
+  { id: 3, business: 'InnoConstruct Ltd.', msg: 'The project timeline looks good', time: '3d ago', unread: false, avatar: 'IC' }
+];
 
-    const MY_RFQS = [
-      { id: 1, title: 'Custom IoT Sensors - 500 units', status: 'Open', responses: 3, created: '2 days ago' },
-      { id: 2, title: 'Packaging Materials - Bulk Order', status: 'In Progress', responses: 5, created: '5 days ago' },
-      { id: 3, title: 'Construction Equipment Rental', status: 'Closed', responses: 8, created: '1 week ago' }
-    ];
+const MY_RFQS = [
+  { id: 1, title: 'Custom IoT Sensors - 500 units', status: 'Open', responses: 3, created: '2 days ago' },
+  { id: 2, title: 'Packaging Materials - Bulk Order', status: 'In Progress', responses: 5, created: '5 days ago' },
+  { id: 3, title: 'Construction Equipment Rental', status: 'Closed', responses: 8, created: '1 week ago' }
+];
 
-    const BROWSE_RFQS = [
-      { id: 4, title: 'LED Controllers for Smart Building', poster: 'BuildTech Corp', category: 'Technology', budget: '$5,000-$10,000', created: '1h ago', responses: 0 },
-      { id: 5, title: 'Metal Fabrication Services', poster: 'AutoParts Inc', category: 'Manufacturing', budget: '$15,000-$25,000', created: '5h ago', responses: 2 }
-    ];
+const BROWSE_RFQS = [
+  { id: 4, title: 'LED Controllers for Smart Building', poster: 'BuildTech Corp', category: 'Technology', budget: '$5,000-$10,000', created: '1h ago', responses: 0 },
+  { id: 5, title: 'Metal Fabrication Services', poster: 'AutoParts Inc', category: 'Manufacturing', budget: '$15,000-$25,000', created: '5h ago', responses: 2 }
+];
 
-    const CATEGORIES = ['Manufacturing', 'Technology', 'Construction', 'Logistics', 'Food & Bev', 'Services'];
+const CATEGORIES = ['Manufacturing', 'Technology', 'Construction', 'Logistics', 'Food & Bev', 'Services'];
 
-    const REVIEWS = [
-      { name: 'John Davis', initials: 'JD', rating: 5, text: 'Excellent quality products!', time: '2 weeks ago' },
-      { name: 'Sarah Kim', initials: 'SK', rating: 4, text: 'Great IoT solutions.', time: '1 month ago' }
-    ];
+const REVIEWS = [
+  { name: 'John Davis', initials: 'JD', rating: 5, text: 'Excellent quality products!', time: '2 weeks ago' },
+  { name: 'Sarah Kim', initials: 'SK', rating: 4, text: 'Great IoT solutions.', time: '1 month ago' }
+];
 
-    // Components
-    const Header = ({ title, onBack, action }) => (
-      <div className="bg-black text-white px-6 py-5 flex items-center justify-between">
-        {onBack ? (
-          <button onClick={onBack} className="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-sm hover:bg-opacity-30">
-            ← Back
-          </button>
-        ) : <div className="w-16" />}
-        <div className="font-semibold">{title}</div>
-        {action || <div className="w-16" />}
+// Reusable Components
+const Header = ({ title, onBack, action }) => (
+  <div className="bg-black text-white px-6 py-5 flex items-center justify-between">
+    {onBack ? (
+      <button onClick={onBack} className="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-sm hover:bg-opacity-30">
+        ← Back
+      </button>
+    ) : <div className="w-16" />}
+    <div className="font-semibold">{title}</div>
+    {action || <div className="w-16" />}
+  </div>
+);
+
+const BusinessCard = ({ business, onNavigate, onMessage }) => (
+  <div className="bg-white rounded-xl p-4 border border-stone-200">
+    <div className="flex gap-3 mb-3">
+      <div 
+        className="w-14 h-14 bg-stone-800 rounded-lg flex items-center justify-center text-white text-xl font-bold cursor-pointer"
+        onClick={onNavigate}
+      >
+        {business.logo}
       </div>
-    );
-
-    const BusinessCard = ({ business, onNavigate, onMessage }) => (
-      <div className="bg-white rounded-xl p-4 border border-stone-200">
-        <div className="flex gap-3 mb-3">
-          <div 
-            className="w-14 h-14 bg-stone-800 rounded-lg flex items-center justify-center text-white text-xl font-bold cursor-pointer"
-            onClick={onNavigate}
-          >
-            {business.logo}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-black cursor-pointer" onClick={onNavigate}>{business.name}</span>
-              {business.verified && <span className="text-black text-sm">✓</span>}
-            </div>
-            <div className="text-sm text-stone-600">{business.category}</div>
-            <div className="text-black text-sm">{'★'.repeat(business.rating)}{'☆'.repeat(5-business.rating)} ({business.reviews})</div>
-          </div>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-black cursor-pointer" onClick={onNavigate}>{business.name}</span>
+          {business.verified && <span className="text-black text-sm">✓</span>}
         </div>
-        <p className="text-sm text-stone-700 mb-3">{business.description}</p>
-        <div className="flex gap-2">
-          <button className="flex-1 bg-white border-2 border-black text-black px-3 py-2 rounded-lg text-sm font-medium hover:bg-black hover:text-white transition-colors">
-            📞 Call
-          </button>
-          <button className="flex-1 bg-white border-2 border-black text-black px-3 py-2 rounded-lg text-sm font-medium hover:bg-black hover:text-white transition-colors">
-            ✉️ Email
-          </button>
-          <button 
-            onClick={onMessage}
-            className="flex-1 bg-black text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors"
-          >
-            💬 Message
-          </button>
-        </div>
+        <div className="text-sm text-stone-600">{business.category}</div>
+        <div className="text-black text-sm">{'★'.repeat(business.rating)}{'☆'.repeat(5-business.rating)} ({business.reviews})</div>
       </div>
-    );
+    </div>
+    <p className="text-sm text-stone-700 mb-3">{business.description}</p>
+    <div className="flex gap-2">
+      <button className="flex-1 bg-white border-2 border-black text-black px-3 py-2 rounded-lg text-sm font-medium hover:bg-black hover:text-white transition-colors">
+        📞 Call
+      </button>
+      <button className="flex-1 bg-white border-2 border-black text-black px-3 py-2 rounded-lg text-sm font-medium hover:bg-black hover:text-white transition-colors">
+        ✉️ Email
+      </button>
+      <button 
+        onClick={onMessage}
+        className="flex-1 bg-black text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors"
+      >
+        💬 Message
+      </button>
+    </div>
+  </div>
+);
 
-    const MessageCard = ({ msg }) => (
-      <div className="bg-white rounded-xl p-4 mb-3 border border-stone-200 cursor-pointer hover:shadow-md transition-shadow">
-        <div className="flex gap-3">
-          <div className="w-12 h-12 bg-stone-800 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
-            {msg.avatar}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between mb-1">
-              <div className="font-semibold text-black truncate">{msg.business}</div>
-              <div className="text-xs text-stone-400 whitespace-nowrap ml-2">{msg.time}</div>
-            </div>
-            <div className={`text-sm truncate ${msg.unread ? 'text-black font-medium' : 'text-stone-500'}`}>
-              {msg.msg}
-            </div>
-          </div>
-          {msg.unread && <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0" />}
+const MessageCard = ({ msg }) => (
+  <div className="bg-white rounded-xl p-4 mb-3 border border-stone-200 cursor-pointer hover:shadow-md transition-shadow">
+    <div className="flex gap-3">
+      <div className="w-12 h-12 bg-stone-800 rounded-lg flex items-center justify-center text-white font-bold flex-shrink-0">
+        {msg.avatar}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between mb-1">
+          <div className="font-semibold text-black truncate">{msg.business}</div>
+          <div className="text-xs text-stone-400 whitespace-nowrap ml-2">{msg.time}</div>
+        </div>
+        <div className={`text-sm truncate ${msg.unread ? 'text-black font-medium' : 'text-stone-500'}`}>
+          {msg.msg}
         </div>
       </div>
-    );
+      {msg.unread && <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0" />}
+    </div>
+  </div>
+);
 
-    const ProductCard = ({ product, onClick }) => (
-      <div className="bg-white rounded-xl p-3 border border-stone-200 cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
-        <div className="text-3xl mb-2 text-center">{product.icon}</div>
-        <div className="font-semibold text-sm text-black mb-1">{product.name}</div>
-        <div className="text-black font-bold">{product.price}</div>
+const ProductCard = ({ product, onClick }) => (
+  <div className="bg-white rounded-xl p-3 border border-stone-200 cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
+    <div className="text-3xl mb-2 text-center">{product.icon}</div>
+    <div className="font-semibold text-sm text-black mb-1">{product.name}</div>
+    <div className="text-black font-bold">{product.price}</div>
+  </div>
+);
+
+const RFQCard = ({ rfq, type }) => (
+  <div className="bg-white rounded-xl p-4 border border-stone-200">
+    <div className="flex justify-between items-start mb-2">
+      <h3 className="font-semibold text-black flex-1">{rfq.title}</h3>
+      {type === 'my' ? (
+        <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ml-2 ${
+          rfq.status === 'Open' ? 'bg-green-50 text-green-600' :
+          rfq.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
+          'bg-gray-100 text-gray-600'
+        }`}>
+          {rfq.status}
+        </span>
+      ) : (
+        <span className="text-xs text-stone-400 whitespace-nowrap ml-2">{rfq.created}</span>
+      )}
+    </div>
+    {type === 'browse' && (
+      <div className="flex items-center gap-2 mb-3 text-xs text-stone-500">
+        <span>by {rfq.poster}</span>
+        <span>•</span>
+        <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-medium">{rfq.category}</span>
       </div>
-    );
-
-    const RFQCard = ({ rfq, type }) => (
-      <div className="bg-white rounded-xl p-4 border border-stone-200">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="font-semibold text-black flex-1">{rfq.title}</h3>
-          {type === 'my' ? (
-            <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ml-2 ${
-              rfq.status === 'Open' ? 'bg-green-50 text-green-600' :
-              rfq.status === 'In Progress' ? 'bg-blue-50 text-blue-600' :
-              'bg-gray-100 text-gray-600'
-            }`}>
-              {rfq.status}
-            </span>
-          ) : (
-            <span className="text-xs text-stone-400 whitespace-nowrap ml-2">{rfq.created}</span>
-          )}
-        </div>
-        {type === 'browse' && (
-          <div className="flex items-center gap-2 mb-3 text-xs text-stone-500">
-            <span>by {rfq.poster}</span>
-            <span>•</span>
-            <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-medium">{rfq.category}</span>
+    )}
+    <div className="flex justify-between items-center text-sm">
+      {type === 'browse' ? (
+        <>
+          <div>
+            <span className="text-stone-500">Budget:</span>
+            <span className="font-semibold text-black ml-1">{rfq.budget}</span>
           </div>
-        )}
-        <div className="flex justify-between items-center text-sm">
-          {type === 'browse' ? (
-            <>
-              <div>
-                <span className="text-stone-500">Budget:</span>
-                <span className="font-semibold text-black ml-1">{rfq.budget}</span>
+          <button className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-800">
+            Submit Bid
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="text-xs text-stone-400">Created {rfq.created}</div>
+          <div className="flex gap-2">
+            <span className="text-stone-600">{rfq.responses} responses</span>
+            <button className="text-black font-medium hover:underline">Edit</button>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
+);
+
+// Main App
+function SyndicateMarketplace() {
+  const [screen, setScreen] = useState('home');
+  const [rfqTab, setRfqTab] = useState('browse');
+  const [selectedBusiness, setSelectedBusiness] = useState(BUSINESSES[0]);
+
+  const unreadCount = MESSAGES.filter(m => m.unread).length;
+
+  const navigateToDetail = (business) => {
+    setSelectedBusiness(business);
+    setScreen('detail');
+  };
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 p-4">
+      {/* Fixed smartphone dimensions container */}
+      <div className="w-full max-w-[430px] min-w-[360px] h-[932px] max-h-[932px] bg-stone-50 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+        
+        {/* Fixed Status Bar - stays at top */}
+        <div className="h-11 bg-black text-white flex items-center justify-between px-6 text-xs flex-shrink-0">
+          <span>9:41</span>
+          <div className="flex gap-2">
+            <span>📶</span>
+            <span>🔋</span>
+          </div>
+        </div>
+
+        {/* Scrollable Content Area - flex-1 with overflow */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden"
+          
+          {/* HOME SCREEN */}
+          {screen === 'home' && (
+            <div className="bg-stone-50">
+              <div className="bg-black text-white px-6 py-12 text-center">
+                <h1 className="text-3xl font-bold mb-2">Syndicate Marketplace</h1>
+                <p className="text-stone-300">Your B2B Business Network</p>
               </div>
-              <button className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-800">
-                Submit Bid
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="text-xs text-stone-400">Created {rfq.created}</div>
-              <div className="flex gap-2">
-                <span className="text-stone-600">{rfq.responses} responses</span>
-                <button className="text-black font-medium hover:underline">Edit</button>
+
+              <div className="bg-white px-6 py-4">
+                <input 
+                  type="text" 
+                  placeholder="Search businesses, products..."
+                  className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black"
+                />
               </div>
-            </>
-          )}
-        </div>
-      </div>
-    );
 
-    // COPY FROM HERE FOR PART 2 →
-  </script>
-</body>
-</html>    // Main App - PASTE THIS AFTER PART 1
-    function SyndicateMarketplace() {
-      const [screen, setScreen] = useState('home');
-      const [rfqTab, setRfqTab] = useState('browse');
-      const [selectedBusiness, setSelectedBusiness] = useState(BUSINESSES[0]);
-
-      const unreadCount = MESSAGES.filter(m => m.unread).length;
-
-      const navigateToDetail = (business) => {
-        setSelectedBusiness(business);
-        setScreen('detail');
-      };
-
-      return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 p-4">
-          <div className="w-full max-w-[430px] min-w-[360px] h-[932px] max-h-[932px] bg-stone-50 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            
-            <div className="h-11 bg-black text-white flex items-center justify-between px-6 text-xs flex-shrink-0">
-              <span>9:41</span>
-              <div className="flex gap-2">
-                <span>📶</span>
-                <span>🔋</span>
+              <div className="px-6 py-6 bg-stone-50">
+                <h2 className="text-lg font-semibold mb-4 text-black">Categories</h2>
+                <div className="grid grid-cols-3 gap-3">
+                  {CATEGORIES.map((cat, i) => (
+                    <div 
+                      key={i}
+                      onClick={() => setScreen('listing')}
+                      className="bg-white border-2 border-stone-300 rounded-xl p-4 text-center cursor-pointer hover:border-black transition-all"
+                    >
+                      <div className="text-2xl mb-1">🏢</div>
+                      <div className="text-xs font-medium text-black">{cat}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="flex-1 overflow-y-auto overflow-x-hidden">
-              
-              {screen === 'home' && (
-                <div className="bg-stone-50">
-                  <div className="bg-black text-white px-6 py-12 text-center">
-                    <h1 className="text-3xl font-bold mb-2">Syndicate Marketplace</h1>
-                    <p className="text-stone-300">Your B2B Business Network</p>
-                  </div>
-                  <div className="bg-white px-6 py-4">
-                    <input 
-                      type="text" 
-                      placeholder="Search businesses, products..."
-                      className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black"
+              <div className="px-6 py-6 bg-stone-50">
+                <h2 className="text-lg font-semibold mb-4 text-black">Featured Businesses</h2>
+                <div className="space-y-4 mb-6">
+                  {BUSINESSES.slice(0, 2).map(business => (
+                    <BusinessCard 
+                      key={business.id}
+                      business={business}
+                      onNavigate={() => navigateToDetail(business)}
+                      onMessage={() => setScreen('message-form')}
                     />
-                  </div>
-                  <div className="px-6 py-6 bg-stone-50">
-                    <h2 className="text-lg font-semibold mb-4 text-black">Categories</h2>
-                    <div className="grid grid-cols-3 gap-3">
-                      {CATEGORIES.map((cat, i) => (
-                        <div 
-                          key={i}
-                          onClick={() => setScreen('listing')}
-                          className="bg-white border-2 border-stone-300 rounded-xl p-4 text-center cursor-pointer hover:border-black transition-all"
-                        >
-                          <div className="text-2xl mb-1">🏢</div>
-                          <div className="text-xs font-medium text-black">{cat}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="px-6 py-6 bg-stone-50">
-                    <h2 className="text-lg font-semibold mb-4 text-black">Featured Businesses</h2>
-                    <div className="space-y-4 mb-6">
-                      {BUSINESSES.slice(0, 2).map(business => (
-                        <BusinessCard 
-                          key={business.id}
-                          business={business}
-                          onNavigate={() => navigateToDetail(business)}
-                          onMessage={() => setScreen('message-form')}
-                        />
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              )}
-
-              {screen === 'listing' && (
-                <div className="bg-stone-50">
-                  <Header title="Manufacturing" onBack={() => setScreen('home')} />
-                  <div className="px-6 py-6">
-                    <div className="space-y-4 mb-6">
-                      {BUSINESSES.map(business => (
-                        <BusinessCard 
-                          key={business.id}
-                          business={business}
-                          onNavigate={() => navigateToDetail(business)}
-                          onMessage={() => setScreen('message-form')}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'detail' && (
-                <div className="bg-stone-50">
-                  <Header title="Business Profile" onBack={() => setScreen('home')} />
-                  <div className="bg-black text-white px-6 pb-8">
-                    <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-3xl font-bold text-black mx-auto mb-4">
-                      {selectedBusiness.logo}
-                    </div>
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                      <h2 className="text-2xl font-bold">{selectedBusiness.name}</h2>
-                      {selectedBusiness.verified && <span className="text-xl">✓</span>}
-                    </div>
-                    <p className="text-center text-stone-300 mb-6">{selectedBusiness.category}</p>
-                    <div className="flex justify-around mb-6">
-                      {[
-                        { label: 'Products', value: '8' },
-                        { label: 'Rating', value: selectedBusiness.rating },
-                        { label: 'Reviews', value: selectedBusiness.reviews }
-                      ].map((stat, i) => (
-                        <div key={i} className="text-center">
-                          <div className="text-2xl font-bold">{stat.value}</div>
-                          <div className="text-xs text-stone-300">{stat.label}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <button className="w-full bg-white bg-opacity-20 text-white px-4 py-3 rounded-xl font-medium border border-white border-opacity-30">
-                        📞 Call
-                      </button>
-                      <button className="w-full bg-white bg-opacity-20 text-white px-4 py-3 rounded-xl font-medium border border-white border-opacity-30">
-                        ✉️ Email
-                      </button>
-                      <button 
-                        onClick={() => setScreen('message-form')}
-                        className="w-full bg-white text-black px-4 py-3 rounded-xl font-medium hover:bg-stone-100"
-                      >
-                        💬 Message
-                      </button>
-                    </div>
-                  </div>
-                  <div className="px-6 py-6">
-                    <h3 className="text-lg font-semibold mb-3 text-black">About Us</h3>
-                    <p className="text-stone-700 mb-6">{selectedBusiness.description} Over 15 years of experience.</p>
-                    <h3 className="text-lg font-semibold mb-3 text-black">Products</h3>
-                    <div className="grid grid-cols-2 gap-3 mb-6">
-                      {PRODUCTS.slice(0, 4).map(product => (
-                        <ProductCard 
-                          key={product.id}
-                          product={product}
-                          onClick={() => setScreen('message-form')}
-                        />
-                      ))}
-                    </div>
-                    <h3 className="text-lg font-semibold mb-3 text-black">Reviews</h3>
-                    <div className="space-y-3 mb-6">
-                      {REVIEWS.map((review, i) => (
-                        <div key={i} className="bg-white rounded-xl p-4 border border-stone-200">
-                          <div className="flex gap-3 mb-2">
-                            <div className="w-10 h-10 bg-stone-800 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                              {review.initials}
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="font-semibold text-sm text-black">{review.name}</div>
-                                <span className="text-black text-xs">✓</span>
-                              </div>
-                              <div className="text-black text-xs">{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</div>
-                            </div>
-                          </div>
-                          <p className="text-sm text-stone-700 mb-1">{review.text}</p>
-                          <div className="text-xs text-stone-400">{review.time}</div>
-                        </div>
-                      ))}
-                    </div>
-                    <button 
-                      onClick={() => setScreen('rfq-create')}
-                      className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800"
-                    >
-                      Request Quote
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'messages' && (
-                <div className="bg-stone-50">
-                  <Header title="Messages" />
-                  <div className="px-6 py-6">
-                    {MESSAGES.map(msg => <MessageCard key={msg.id} msg={msg} />)}
-                  </div>
-                </div>
-              )}
-
-              {screen === 'message-form' && (
-                <div className="bg-stone-50">
-                  <Header title="New Message" onBack={() => setScreen('detail')} />
-                  <div className="px-6 py-6">
-                    <form onSubmit={(e) => { e.preventDefault(); setScreen('success'); }}>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">To</label>
-                        <input type="text" defaultValue={selectedBusiness.name} readOnly className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl bg-stone-100" />
-                      </div>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Your Name</label>
-                        <input type="text" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
-                      </div>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Email</label>
-                        <input type="email" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
-                      </div>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Message</label>
-                        <textarea required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"></textarea>
-                      </div>
-                      <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
-                        Send Message
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'rfqs' && (
-                <div className="bg-stone-50">
-                  <Header 
-                    title="RFQs" 
-                    action={
-                      <button 
-                        onClick={() => setScreen('rfq-create')}
-                        className="bg-white bg-opacity-20 px-4 py-2 rounded-lg text-sm hover:bg-opacity-30"
-                      >
-                        + New
-                      </button>
-                    }
-                  />
-                  <div className="bg-white border-b border-stone-200 flex">
-                    {['browse', 'my-rfqs'].map(tab => (
-                      <button
-                        key={tab}
-                        onClick={() => setRfqTab(tab)}
-                        className={`flex-1 py-4 font-medium ${
-                          rfqTab === tab ? 'text-black border-b-2 border-black' : 'text-stone-400'
-                        }`}
-                      >
-                        {tab === 'browse' ? 'Browse RFQs' : 'My RFQs'}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="px-6 py-6">
-                    <div className="space-y-4 mb-6">
-                      {rfqTab === 'browse' 
-                        ? BROWSE_RFQS.map(rfq => <RFQCard key={rfq.id} rfq={rfq} type="browse" />)
-                        : MY_RFQS.map(rfq => <RFQCard key={rfq.id} rfq={rfq} type="my" />)
-                      }
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'rfq-create' && (
-                <div className="bg-stone-50">
-                  <Header title="Create RFQ" onBack={() => setScreen('rfqs')} />
-                  <div className="px-6 py-6">
-                    <form onSubmit={(e) => { e.preventDefault(); setScreen('success'); }}>
-                      {[
-                        { label: 'Your Name', type: 'text', placeholder: 'Enter your name' },
-                        { label: 'Company', type: 'text', placeholder: 'Your company name' },
-                        { label: 'Email', type: 'email', placeholder: 'your@email.com' }
-                      ].map((field, i) => (
-                        <div key={i} className="mb-4">
-                          <label className="block font-medium mb-2 text-black">{field.label}</label>
-                          <input 
-                            type={field.type} 
-                            placeholder={field.placeholder}
-                            required 
-                            className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
-                          />
-                        </div>
-                      ))}
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Requirements</label>
-                        <textarea required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"></textarea>
-                      </div>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Attachments (Optional)</label>
-                        <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center">
-                          <div className="text-3xl mb-2">📎</div>
-                          <div className="text-sm text-stone-600">Click to upload files</div>
-                        </div>
-                      </div>
-                      <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
-                        Submit Request
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'profile' && (
-                <div className="bg-stone-50">
-                  <Header title="My Profile" />
-                  <div className="px-6 py-8 text-center">
-                    <div className="w-20 h-20 bg-stone-800 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
-                      MB
-                    </div>
-                    <h2 className="text-xl font-bold mb-1 text-black">My Business Inc.</h2>
-                    <p className="text-stone-500 mb-3">Technology Vendor</p>
-                    <span className="bg-stone-200 text-black px-3 py-1 rounded-lg text-sm font-medium">Free Plan</span>
-                  </div>
-                  <div className="px-6 pb-6">
-                    <div className="bg-white rounded-xl p-5 mb-5 border border-stone-200">
-                      <h3 className="font-semibold mb-4 text-black">Account Stats</h3>
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        {[
-                          { label: 'Products', value: PRODUCTS.length },
-                          { label: 'RFQs', value: MY_RFQS.length },
-                          { label: 'Views', value: 127 }
-                        ].map((stat, i) => (
-                          <div key={i}>
-                            <div className="text-2xl font-bold text-black">{stat.value}</div>
-                            <div className="text-xs text-stone-500">{stat.label}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => setScreen('subscription')}
-                      className="w-full bg-black text-white py-3 rounded-xl font-semibold mb-4 hover:bg-stone-800"
-                    >
-                      Upgrade to Pro 🚀
-                    </button>
-                    <div className="space-y-3 mb-6">
-                      {['Manage Products', 'Settings'].map((item, i) => (
-                        <div 
-                          key={i}
-                          onClick={() => item === 'Manage Products' && setScreen('manage-products')}
-                          className="bg-white rounded-xl p-4 text-center border border-stone-200 cursor-pointer hover:shadow-md transition-shadow"
-                        >
-                          <div className="font-medium text-black">{item}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'manage-products' && (
-                <div className="bg-stone-50">
-                  <Header 
-                    title="Manage Products" 
-                    onBack={() => setScreen('profile')}
-                    action={
-                      <button 
-                        onClick={() => setScreen('add-product')}
-                        className="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-sm hover:bg-opacity-30"
-                      >
-                        + Add
-                      </button>
-                    }
-                  />
-                  <div className="px-6 py-6">
-                    <div className="space-y-3 mb-6">
-                      {PRODUCTS.map(product => (
-                        <div key={product.id} className="bg-white rounded-xl p-4 border border-stone-200">
-                          <div className="flex gap-3">
-                            <div className="w-16 h-16 bg-stone-100 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
-                              {product.icon}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between items-start mb-1">
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-semibold text-black truncate">{product.name}</div>
-                                  <div className="text-sm text-stone-500">{product.price}</div>
-                                </div>
-                                <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ml-2 ${
-                                  product.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-600'
-                                }`}>
-                                  {product.status}
-                                </span>
-                              </div>
-                              <div className="text-xs text-stone-400 mb-2">{product.sales} sales</div>
-                              <div className="flex gap-2">
-                                <button className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-stone-800">
-                                  Edit
-                                </button>
-                                <button className="px-3 py-1.5 bg-stone-100 text-black rounded-lg text-xs font-medium hover:bg-stone-200">
-                                  Duplicate
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'add-product' && (
-                <div className="bg-stone-50">
-                  <Header title="Add Product" onBack={() => setScreen('manage-products')} />
-                  <div className="px-6 py-6">
-                    <form onSubmit={(e) => { e.preventDefault(); setScreen('manage-products'); }}>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Product Name</label>
-                        <input type="text" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
-                      </div>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Product Images</label>
-                        <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center">
-                          <div className="text-3xl mb-2">📷</div>
-                          <div className="text-sm text-stone-600">Upload product images</div>
-                        </div>
-                      </div>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Description</label>
-                        <textarea required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"></textarea>
-                      </div>
-                      <div className="mb-4">
-                        <label className="block font-medium mb-2 text-black">Base Price</label>
-                        <input type="text" placeholder="$299" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
-                      </div>
-                      <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
-                        Add Product
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              )}
-
-              {screen === 'subscription' && (
-                <div className="bg-stone-50">
-                  <Header title="Upgrade" onBack={() => setScreen('profile')} />
-                  <div className="px-6 py-6">
-                    {[
-                      { name: 'Free Plan', price: '$0', features: ['Business profile', 'Up to 10 products', 'Mini website', 'Email inquiries'], current: true },
-                      { name: 'Monthly Pro', price: '$99', features: ['Everything in Free', 'Unlimited products', 'RFQ access', 'Analytics'], current: false },
-                      { name: 'Annual Pro', price: '$79', features: ['Everything in Monthly Pro', 'Featured listings', 'Premium ads', 'API access'], recommended: true, current: false }
-                    ].map((plan, i) => (
-                      <div key={i} className={`bg-white rounded-2xl p-6 mb-4 relative ${plan.recommended ? 'border-2 border-black' : 'border-2 border-stone-200'}`}>
-                        {plan.recommended && (
-                          <div className="absolute -top-3 right-5 bg-black text-white px-3 py-1 rounded-full text-xs font-semibold">
-                            Best Value
-                          </div>
-                        )}
-                        <h3 className="text-xl font-bold text-black mb-2">{plan.name}</h3>
-                        <div className="text-3xl font-bold text-black mb-4">
-                          {plan.price}<span className="text-base font-normal text-stone-500">/month</span>
-                        </div>
-                        <ul className="space-y-2 mb-5">
-                          {plan.features.map((f, j) => (
-                            <li key={j} className="flex items-start gap-2 text-sm text-black">
-                              <span className="text-green-600 text-lg">✓</span>
-                              <span>{f}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <button 
-                          onClick={() => !plan.current && setScreen('success')}
-                          className={`w-full py-3 rounded-xl font-semibold ${
-                            plan.current 
-                              ? 'border-2 border-black text-black' 
-                              : 'bg-black text-white hover:bg-stone-800'
-                          }`}
-                        >
-                          {plan.current ? 'Current Plan' : 'Upgrade Now'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {screen === 'success' && (
-                <div className="min-h-full flex items-center justify-center px-6 bg-stone-50">
-                  <div className="text-center">
-                    <div className="text-7xl mb-6">✓</div>
-                    <h2 className="text-2xl font-bold text-black mb-3">Success!</h2>
-                    <p className="text-stone-600 mb-8">Your request has been submitted.</p>
-                    <button 
-                      onClick={() => setScreen('home')}
-                      className="bg-black text-white px-8 py-3 rounded-xl font-semibold hover:bg-stone-800"
-                    >
-                      Back to Home
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
+          )}
 
-            <div className="bg-white border-t border-stone-300 flex-shrink-0">
-              <div className="flex justify-around py-3">
-                {[
-                  { id: 'home', icon: '🏠', label: 'Home' },
-                  { id: 'listing', icon: '🔍', label: 'Explore' },
-                  { id: 'rfqs', icon: '📋', label: 'RFQs' },
-                  { id: 'messages', icon: '💬', label: 'Messages', badge: unreadCount },
-                  { id: 'profile', icon: '👤', label: 'Profile' }
-                ].map(nav => (
-                  <button
-                    key={nav.id}
-                    onClick={() => setScreen(nav.id)}
-                    className={`flex flex-col items-center gap-1 px-3 py-2 relative ${screen === nav.id ? 'text-black' : 'text-stone-400'}`}
-                  >
-                    <div className="text-2xl relative">
-                      {nav.icon}
-                      {nav.badge > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
-                          {nav.badge}
-                        </span>
-                      )}
+          {/* LISTING SCREEN */}
+          {screen === 'listing' && (
+            <div className="bg-stone-50">
+              <Header title="Manufacturing" onBack={() => setScreen('home')} />
+              <div className="px-6 py-6">
+                <div className="space-y-4 mb-6">
+                  {BUSINESSES.map(business => (
+                    <BusinessCard 
+                      key={business.id}
+                      business={business}
+                      onNavigate={() => navigateToDetail(business)}
+                      onMessage={() => setScreen('message-form')}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DETAIL SCREEN */}
+          {screen === 'detail' && (
+            <div className="bg-stone-50">
+              <Header title="Business Profile" onBack={() => setScreen('home')} />
+
+              <div className="bg-black text-white px-6 pb-8">
+                <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center text-3xl font-bold text-black mx-auto mb-4">
+                  {selectedBusiness.logo}
+                </div>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <h2 className="text-2xl font-bold">{selectedBusiness.name}</h2>
+                  {selectedBusiness.verified && <span className="text-xl">✓</span>}
+                </div>
+                <p className="text-center text-stone-300 mb-6">{selectedBusiness.category}</p>
+                <div className="flex justify-around mb-6">
+                  {[
+                    { label: 'Products', value: '8' },
+                    { label: 'Rating', value: selectedBusiness.rating },
+                    { label: 'Reviews', value: selectedBusiness.reviews }
+                  ].map((stat, i) => (
+                    <div key={i} className="text-center">
+                      <div className="text-2xl font-bold">{stat.value}</div>
+                      <div className="text-xs text-stone-300">{stat.label}</div>
                     </div>
-                    <div className="text-xs font-medium">{nav.label}</div>
+                  ))}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button className="w-full bg-white bg-opacity-20 text-white px-4 py-3 rounded-xl font-medium border border-white border-opacity-30">
+                    📞 Call
+                  </button>
+                  <button className="w-full bg-white bg-opacity-20 text-white px-4 py-3 rounded-xl font-medium border border-white border-opacity-30">
+                    ✉️ Email
+                  </button>
+                  <button 
+                    onClick={() => setScreen('message-form')}
+                    className="w-full bg-white text-black px-4 py-3 rounded-xl font-medium hover:bg-stone-100"
+                  >
+                    💬 Message
+                  </button>
+                </div>
+              </div>
+
+              <div className="px-6 py-6">
+                <h3 className="text-lg font-semibold mb-3 text-black">About Us</h3>
+                <p className="text-stone-700 mb-6">{selectedBusiness.description} Over 15 years of experience.</p>
+                
+                <h3 className="text-lg font-semibold mb-3 text-black">Products</h3>
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  {PRODUCTS.slice(0, 4).map(product => (
+                    <ProductCard 
+                      key={product.id}
+                      product={product}
+                      onClick={() => setScreen('message-form')}
+                    />
+                  ))}
+                </div>
+
+                <h3 className="text-lg font-semibold mb-3 text-black">Reviews</h3>
+                <div className="space-y-3 mb-6">
+                  {REVIEWS.map((review, i) => (
+                    <div key={i} className="bg-white rounded-xl p-4 border border-stone-200">
+                      <div className="flex gap-3 mb-2">
+                        <div className="w-10 h-10 bg-stone-800 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                          {review.initials}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="font-semibold text-sm text-black">{review.name}</div>
+                            <span className="text-black text-xs">✓</span>
+                          </div>
+                          <div className="text-black text-xs">{'★'.repeat(review.rating)}{'☆'.repeat(5-review.rating)}</div>
+                        </div>
+                      </div>
+                      <p className="text-sm text-stone-700 mb-1">{review.text}</p>
+                      <div className="text-xs text-stone-400">{review.time}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <button 
+                  onClick={() => setScreen('rfq-create')}
+                  className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800"
+                >
+                  Request Quote
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* MESSAGES SCREEN */}
+          {screen === 'messages' && (
+            <div className="bg-stone-50">
+              <Header title="Messages" />
+              <div className="px-6 py-6">
+                {MESSAGES.map(msg => <MessageCard key={msg.id} msg={msg} />)}
+              </div>
+            </div>
+          )}
+
+          {/* MESSAGE FORM SCREEN */}
+          {screen === 'message-form' && (
+            <div className="bg-stone-50">
+              <Header title="New Message" onBack={() => setScreen('detail')} />
+              <div className="px-6 py-6">
+                <form onSubmit={(e) => { e.preventDefault(); setScreen('success'); }}>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">To</label>
+                    <input type="text" defaultValue={selectedBusiness.name} readOnly className="w-full px-4 py-3 border-2 border-stone-200 rounded-xl bg-stone-100" />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Your Name</label>
+                    <input type="text" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Email</label>
+                    <input type="email" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Message</label>
+                    <textarea required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"></textarea>
+                  </div>
+                  <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
+                    Send Message
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* RFQS SCREEN */}
+          {screen === 'rfqs' && (
+            <div className="bg-stone-50">
+              <Header 
+                title="RFQs" 
+                action={
+                  <button 
+                    onClick={() => setScreen('rfq-create')}
+                    className="bg-white bg-opacity-20 px-4 py-2 rounded-lg text-sm hover:bg-opacity-30"
+                  >
+                    + New
+                  </button>
+                }
+              />
+
+              <div className="bg-white border-b border-stone-200 flex">
+                {['browse', 'my-rfqs'].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setRfqTab(tab)}
+                    className={`flex-1 py-4 font-medium ${
+                      rfqTab === tab ? 'text-black border-b-2 border-black' : 'text-stone-400'
+                    }`}
+                  >
+                    {tab === 'browse' ? 'Browse RFQs' : 'My RFQs'}
                   </button>
                 ))}
               </div>
+
+              <div className="px-6 py-6">
+                <div className="space-y-4 mb-6">
+                  {rfqTab === 'browse' 
+                    ? BROWSE_RFQS.map(rfq => <RFQCard key={rfq.id} rfq={rfq} type="browse" />)
+                    : MY_RFQS.map(rfq => <RFQCard key={rfq.id} rfq={rfq} type="my" />)
+                  }
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* RFQ CREATE SCREEN */}
+          {screen === 'rfq-create' && (
+            <div className="bg-stone-50">
+              <Header title="Create RFQ" onBack={() => setScreen('rfqs')} />
+              <div className="px-6 py-6">
+                <form onSubmit={(e) => { e.preventDefault(); setScreen('success'); }}>
+                  {[
+                    { label: 'Your Name', type: 'text', placeholder: 'Enter your name' },
+                    { label: 'Company', type: 'text', placeholder: 'Your company name' },
+                    { label: 'Email', type: 'email', placeholder: 'your@email.com' }
+                  ].map((field, i) => (
+                    <div key={i} className="mb-4">
+                      <label className="block font-medium mb-2 text-black">{field.label}</label>
+                      <input 
+                        type={field.type} 
+                        placeholder={field.placeholder}
+                        required 
+                        className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" 
+                      />
+                    </div>
+                  ))}
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Requirements</label>
+                    <textarea required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"></textarea>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Attachments (Optional)</label>
+                    <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center">
+                      <div className="text-3xl mb-2">📎</div>
+                      <div className="text-sm text-stone-600">Click to upload files</div>
+                    </div>
+                  </div>
+                  <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
+                    Submit Request
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* PROFILE SCREEN */}
+          {screen === 'profile' && (
+            <div className="bg-stone-50">
+              <Header title="My Profile" />
+              <div className="px-6 py-8 text-center">
+                <div className="w-20 h-20 bg-stone-800 rounded-2xl flex items-center justify-center text-white text-2xl font-bold mx-auto mb-4">
+                  MB
+                </div>
+                <h2 className="text-xl font-bold mb-1 text-black">My Business Inc.</h2>
+                <p className="text-stone-500 mb-3">Technology Vendor</p>
+                <span className="bg-stone-200 text-black px-3 py-1 rounded-lg text-sm font-medium">Free Plan</span>
+              </div>
+              <div className="px-6 pb-6">
+                <div className="bg-white rounded-xl p-5 mb-5 border border-stone-200">
+                  <h3 className="font-semibold mb-4 text-black">Account Stats</h3>
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    {[
+                      { label: 'Products', value: PRODUCTS.length },
+                      { label: 'RFQs', value: MY_RFQS.length },
+                      { label: 'Views', value: 127 }
+                    ].map((stat, i) => (
+                      <div key={i}>
+                        <div className="text-2xl font-bold text-black">{stat.value}</div>
+                        <div className="text-xs text-stone-500">{stat.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setScreen('subscription')}
+                  className="w-full bg-black text-white py-3 rounded-xl font-semibold mb-4 hover:bg-stone-800"
+                >
+                  Upgrade to Pro 🚀
+                </button>
+                <div className="space-y-3 mb-6">
+                  {['Manage Products', 'Settings'].map((item, i) => (
+                    <div 
+                      key={i}
+                      onClick={() => item === 'Manage Products' && setScreen('manage-products')}
+                      className="bg-white rounded-xl p-4 text-center border border-stone-200 cursor-pointer hover:shadow-md transition-shadow"
+                    >
+                      <div className="font-medium text-black">{item}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* MANAGE PRODUCTS SCREEN */}
+          {screen === 'manage-products' && (
+            <div className="bg-stone-50">
+              <Header 
+                title="Manage Products" 
+                onBack={() => setScreen('profile')}
+                action={
+                  <button 
+                    onClick={() => setScreen('add-product')}
+                    className="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-sm hover:bg-opacity-30"
+                  >
+                    + Add
+                  </button>
+                }
+              />
+              <div className="px-6 py-6">
+                <div className="space-y-3 mb-6">
+                  {PRODUCTS.map(product => (
+                    <div key={product.id} className="bg-white rounded-xl p-4 border border-stone-200">
+                      <div className="flex gap-3">
+                        <div className="w-16 h-16 bg-stone-100 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
+                          {product.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start mb-1">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-black truncate">{product.name}</div>
+                              <div className="text-sm text-stone-500">{product.price}</div>
+                            </div>
+                            <span className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ml-2 ${
+                              product.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {product.status}
+                            </span>
+                          </div>
+                          <div className="text-xs text-stone-400 mb-2">{product.sales} sales</div>
+                          <div className="flex gap-2">
+                            <button className="px-3 py-1.5 bg-black text-white rounded-lg text-xs font-medium hover:bg-stone-800">
+                              Edit
+                            </button>
+                            <button className="px-3 py-1.5 bg-stone-100 text-black rounded-lg text-xs font-medium hover:bg-stone-200">
+                              Duplicate
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ADD PRODUCT SCREEN */}
+          {screen === 'add-product' && (
+            <div className="bg-stone-50">
+              <Header title="Add Product" onBack={() => setScreen('manage-products')} />
+              <div className="px-6 py-6">
+                <form onSubmit={(e) => { e.preventDefault(); setScreen('manage-products'); }}>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Product Name</label>
+                    <input type="text" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Product Images</label>
+                    <div className="border-2 border-dashed border-stone-300 rounded-xl p-6 text-center">
+                      <div className="text-3xl mb-2">📷</div>
+                      <div className="text-sm text-stone-600">Upload product images</div>
+                    </div>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Description</label>
+                    <textarea required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black min-h-32"></textarea>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block font-medium mb-2 text-black">Base Price</label>
+                    <input type="text" placeholder="$299" required className="w-full px-4 py-3 border-2 border-stone-300 rounded-xl focus:outline-none focus:border-black" />
+                  </div>
+                  <button type="submit" className="w-full bg-black text-white py-3 rounded-xl font-semibold hover:bg-stone-800">
+                    Add Product
+                  </button>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* SUBSCRIPTION SCREEN */}
+          {screen === 'subscription' && (
+            <div className="bg-stone-50">
+              <Header title="Upgrade" onBack={() => setScreen('profile')} />
+              <div className="px-6 py-6">
+                {[
+                  { name: 'Free Plan', price: '$0', features: ['Business profile', 'Up to 10 products', 'Mini website', 'Email inquiries'], current: true },
+                  { name: 'Monthly Pro', price: '$99', features: ['Everything in Free', 'Unlimited products', 'RFQ access', 'Analytics'], current: false },
+                  { name: 'Annual Pro', price: '$79', features: ['Everything in Monthly Pro', 'Featured listings', 'Premium ads', 'API access'], recommended: true, current: false }
+                ].map((plan, i) => (
+                  <div key={i} className={`bg-white rounded-2xl p-6 mb-4 relative ${plan.recommended ? 'border-2 border-black' : 'border-2 border-stone-200'}`}>
+                    {plan.recommended && (
+                      <div className="absolute -top-3 right-5 bg-black text-white px-3 py-1 rounded-full text-xs font-semibold">
+                        Best Value
+                      </div>
+                    )}
+                    <h3 className="text-xl font-bold text-black mb-2">{plan.name}</h3>
+                    <div className="text-3xl font-bold text-black mb-4">
+                      {plan.price}<span className="text-base font-normal text-stone-500">/month</span>
+                    </div>
+                    <ul className="space-y-2 mb-5">
+                      {plan.features.map((f, j) => (
+                        <li key={j} className="flex items-start gap-2 text-sm text-black">
+                          <span className="text-green-600 text-lg">✓</span>
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <button 
+                      onClick={() => !plan.current && setScreen('success')}
+                      className={`w-full py-3 rounded-xl font-semibold ${
+                        plan.current 
+                          ? 'border-2 border-black text-black' 
+                          : 'bg-black text-white hover:bg-stone-800'
+                      }`}
+                    >
+                      {plan.current ? 'Current Plan' : 'Upgrade Now'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* SUCCESS SCREEN */}
+          {screen === 'success' && (
+            <div className="min-h-full flex items-center justify-center px-6 bg-stone-50">
+              <div className="text-center">
+                <div className="text-7xl mb-6">✓</div>
+                <h2 className="text-2xl font-bold text-black mb-3">Success!</h2>
+                <p className="text-stone-600 mb-8">Your request has been submitted.</p>
+                <button 
+                  onClick={() => setScreen('home')}
+                  className="bg-black text-white px-8 py-3 rounded-xl font-semibold hover:bg-stone-800"
+                >
+                  Back to Home
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Fixed Bottom Nav - stays at bottom */}
+        <div className="bg-white border-t border-stone-300 flex-shrink-0">
+          <div className="flex justify-around py-3">
+            {[
+              { id: 'home', icon: '🏠', label: 'Home' },
+              { id: 'listing', icon: '🔍', label: 'Explore' },
+              { id: 'rfqs', icon: '📋', label: 'RFQs' },
+              { id: 'messages', icon: '💬', label: 'Messages', badge: unreadCount },
+              { id: 'profile', icon: '👤', label: 'Profile' }
+            ].map(nav => (
+              <button
+                key={nav.id}
+                onClick={() => setScreen(nav.id)}
+                className={`flex flex-col items-center gap-1 px-3 py-2 relative ${screen === nav.id ? 'text-black' : 'text-stone-400'}`}
+              >
+                <div className="text-2xl relative">
+                  {nav.icon}
+                  {nav.badge > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                      {nav.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs font-medium">{nav.label}</div>
+              </button>
+            ))}
           </div>
         </div>
-      );
-    }
-
+      </div>
+    </div>
+  );
+}
     ReactDOM.render(<SyndicateMarketplace />, document.getElementById('root'));
   </script>
 </body>
