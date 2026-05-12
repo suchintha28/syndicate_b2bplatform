@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Icon } from '@/components/icons'
-import { Button, Badge, Avatar, Field, TextArea, PageHeader, BackLink, VerifiedMark } from '@/components/ui'
+import { Button, Badge, Avatar, Field, TextArea, PageHeader, BackLink } from '@/components/ui'
 import { PRODUCTS, CATEGORIES, MY_RFQS, PLANS, type UserProfile, type Product, type Screen } from '@/lib/data'
 
 /* ── ProLock ────────────────────────────────── */

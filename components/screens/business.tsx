@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Icon } from '@/components/icons'
-import { Button, Avatar, Badge, Chip, Field, TextArea, Select, PageHeader, BackLink, Tabs, EmptyState, VerifiedMark } from '@/components/ui'
+import { Button, Avatar, Chip, Field, TextArea, PageHeader, BackLink, Tabs, EmptyState, VerifiedMark } from '@/components/ui'
 import { RFQCard, MessageCard } from '@/components/cards'
 import { BROWSE_RFQS, MY_RFQS, MESSAGES, CATEGORIES, type Business, type Screen } from '@/lib/data'
 
@@ -99,7 +99,7 @@ export function RFQCreateScreen({ goTo }: { goTo: (s: Screen) => void }) {
 }
 
 /* ── MessagesScreen ─────────────────────────── */
-export function MessagesScreen({ goTo }: { goTo: (s: Screen) => void }) {
+export function MessagesScreen({ goTo: _goTo }: { goTo: (s: Screen) => void }) {
   const [search, setSearch] = useState('')
   const filtered = MESSAGES.filter(m =>
     m.business.toLowerCase().includes(search.toLowerCase()) || m.msg.toLowerCase().includes(search.toLowerCase())
