@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { TopNav, BottomNav } from '@/components/nav'
@@ -55,8 +55,9 @@ export default function App() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [isProMember, setIsProMember] = useState(false)
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE)
-  const [favorites, setFavorites] = useState<number[]>([])
-  const [recentlyViewed, setRecentlyViewed] = useState<number[]>([])
+  const [favorites, setFavorites] = useState<string[]>([])
+  const [recentlyViewed, setRecentlyViewed] = useState<string[]>([])
+  const [brandsCache, setBrandsCache] = useState<Record<string, Business>>({})
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -107,12 +108,19 @@ export default function App() {
     setSelectedBusinessState(b)
     if (b) {
       setRecentlyViewed(prev => [b.id, ...prev.filter(x => x !== b.id)].slice(0, 10))
+      setBrandsCache(prev => ({ ...prev, [b.id]: b }))
     }
   }, [])
 
-  const toggleFavorite = useCallback((id: number) => {
+  const toggleFavorite = useCallback((id: string) => {
     setFavorites(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }, [])
+
+  // Resolve recently viewed IDs → Business objects using the cache
+  const recentlyViewedBrands = useMemo(() =>
+    recentlyViewed.map(id => brandsCache[id]).filter(Boolean) as Business[],
+    [recentlyViewed, brandsCache]
+  )
 
   const unreadCount = user ? MESSAGES.filter(m => m.unread).length : 0
   const cardStyle = 'bordered' as const
@@ -127,7 +135,7 @@ export default function App() {
             setSelectedProduct={setSelectedProduct}
             favorites={favorites}
             toggleFavorite={toggleFavorite}
-            recentlyViewed={recentlyViewed}
+            recentlyViewedBrands={recentlyViewedBrands}
             cardStyle={cardStyle}
           />
         )
@@ -170,6 +178,7 @@ export default function App() {
             favorites={favorites}
             toggleFavorite={toggleFavorite}
             setSelectedBusiness={setSelectedBusiness}
+            brandsCache={brandsCache}
             cardStyle={cardStyle}
           />
         )
@@ -246,7 +255,7 @@ export default function App() {
             setSelectedProduct={setSelectedProduct}
             favorites={favorites}
             toggleFavorite={toggleFavorite}
-            recentlyViewed={recentlyViewed}
+            recentlyViewedBrands={recentlyViewedBrands}
             cardStyle={cardStyle}
           />
         )

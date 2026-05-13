@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import { generateSlug } from '@/lib/supabase/queries'
 
 const CATEGORIES = ['Manufacturing', 'Technology', 'Construction', 'Logistics', 'Food & Bev', 'Services']
 
@@ -13,7 +14,7 @@ export default function BrandOnboardingPage() {
     category: 'Technology',
     description: '',
     website: '',
-    location: '',
+    city: '',
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -36,19 +37,26 @@ export default function BrandOnboardingPage() {
         return
       }
 
+      // Generate a unique slug from the brand name
+      const baseSlug = generateSlug(form.name)
+      const uniqueSuffix = Math.random().toString(36).slice(2, 6)
+      const slug = `${baseSlug}-${uniqueSuffix}`
+
       const { error: insertError } = await supabase.from('brands').insert({
-        owner_id: user.id,
-        name: form.name,
-        category: form.category,
+        owner_id:    user.id,
+        name:        form.name,
+        slug,
+        categories:  [form.category],
         description: form.description,
-        website: form.website || null,
-        location: form.location || null,
-        verified: false,
+        website:     form.website || null,
+        city:        form.city || null,
+        is_verified: false,
+        is_active:   true,
       })
 
       if (insertError) {
-        if (insertError.message.includes('duplicate') || insertError.code === '23505') {
-          setError('A brand with this name already exists.')
+        if (insertError.code === '23505') {
+          setError('A brand with this name already exists. Try a slightly different name.')
         } else {
           setError(insertError.message)
         }
@@ -69,33 +77,17 @@ export default function BrandOnboardingPage() {
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div style={{
-            width: 48, height: 48, borderRadius: 'var(--r-md)',
-            background: 'var(--primary)', display: 'grid', placeItems: 'center',
-            margin: '0 auto 16px', color: 'white', fontSize: 22, fontWeight: 800,
-            fontFamily: 'var(--font-inter-tight, "Inter Tight", Inter, sans-serif)',
-          }}>S</div>
+          <div style={{ width: 48, height: 48, borderRadius: 'var(--r-md)', background: 'var(--primary)', display: 'grid', placeItems: 'center', margin: '0 auto 16px', color: 'white', fontSize: 22, fontWeight: 800, fontFamily: 'var(--font-inter-tight, "Inter Tight", Inter, sans-serif)' }}>S</div>
           <div className="uppercase-label mb-2">Step 1 of 1</div>
-          <h1 className="font-display" style={{ fontSize: 28, fontWeight: 700, margin: '0 0 8px' }}>
-            Set up your brand
-          </h1>
-          <p className="text-muted" style={{ fontSize: 15 }}>
-            This is your public business profile on Syndicate. You can update it any time.
-          </p>
+          <h1 className="font-display" style={{ fontSize: 28, fontWeight: 700, margin: '0 0 8px' }}>Set up your brand</h1>
+          <p className="text-muted" style={{ fontSize: 15 }}>This is your public business profile on Syndicate. You can update it any time.</p>
         </div>
 
         <div className="card" style={{ padding: 32 }}>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="field-label">Business name</label>
-              <input
-                className="field"
-                type="text"
-                placeholder="Acme Industries Ltd."
-                value={form.name}
-                onChange={upd('name')}
-                required
-              />
+              <input className="field" type="text" placeholder="Acme Industries Ltd." value={form.name} onChange={upd('name')} required />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }} className="mb-4">
@@ -106,51 +98,25 @@ export default function BrandOnboardingPage() {
                 </select>
               </div>
               <div>
-                <label className="field-label">Location</label>
-                <input
-                  className="field"
-                  type="text"
-                  placeholder="Colombo, Sri Lanka"
-                  value={form.location}
-                  onChange={upd('location')}
-                />
+                <label className="field-label">City <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
+                <input className="field" type="text" placeholder="Colombo" value={form.city} onChange={upd('city')} />
               </div>
             </div>
 
             <div className="mb-4">
               <label className="field-label">Description</label>
-              <textarea
-                className="field"
-                rows={4}
+              <textarea className="field" rows={4}
                 placeholder="Describe what your business does, who you serve, and what makes you different…"
-                value={form.description}
-                onChange={upd('description')}
-                required
-                style={{ resize: 'vertical' }}
-              />
+                value={form.description} onChange={upd('description')} required style={{ resize: 'vertical' }} />
             </div>
 
             <div className="mb-5">
               <label className="field-label">Website <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-              <input
-                className="field"
-                type="url"
-                placeholder="https://yourcompany.com"
-                value={form.website}
-                onChange={upd('website')}
-              />
+              <input className="field" type="url" placeholder="https://yourcompany.com" value={form.website} onChange={upd('website')} />
             </div>
 
             {error && (
-              <div style={{
-                background: 'var(--danger-soft)',
-                border: '1px solid rgba(185,28,28,0.2)',
-                borderRadius: 'var(--r-sm)',
-                padding: '10px 14px',
-                color: 'var(--danger)',
-                fontSize: 13,
-                marginBottom: 16,
-              }}>
+              <div style={{ background: 'var(--danger-soft)', border: '1px solid rgba(185,28,28,0.2)', borderRadius: 'var(--r-sm)', padding: '10px 14px', color: 'var(--danger)', fontSize: 13, marginBottom: 16 }}>
                 {error}
               </div>
             )}

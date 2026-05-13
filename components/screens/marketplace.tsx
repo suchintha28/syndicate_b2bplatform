@@ -4,8 +4,10 @@ import React, { useState, useMemo, useEffect } from 'react'
 import { Icon } from '@/components/icons'
 import { Button, Badge, Avatar, Stars, Chip, SkeletonCard, EmptyState, PageHeader, BackLink, Tabs, VerifiedMark } from '@/components/ui'
 import { BusinessCard, ProductCard, CategoryTile } from '@/components/cards'
+import { createClient } from '@/lib/supabase/client'
+import { dbBrandToBusiness, dbProductToProduct } from '@/lib/supabase/queries'
 import {
-  BUSINESSES, PRODUCTS, CATEGORIES, LOCATIONS, PRICE_RANGES, RATING_FILTERS, REVIEWS,
+  CATEGORIES, LOCATIONS, PRICE_RANGES, RATING_FILTERS, REVIEWS,
   type Business, type Product, type Screen, type NavOpts
 } from '@/lib/data'
 
@@ -13,16 +15,40 @@ interface CommonProps {
   goTo: (s: Screen, opts?: NavOpts) => void
   setSelectedBusiness: (b: Business | null) => void
   setSelectedProduct: (p: Product | null) => void
-  favorites: number[]
-  toggleFavorite: (id: number) => void
+  favorites: string[]
+  toggleFavorite: (id: string) => void
   cardStyle: 'bordered' | 'shadow' | 'minimal'
 }
 
 /* ── HomeScreen ─────────────────────────────── */
-export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favorites, toggleFavorite, recentlyViewed, cardStyle }: CommonProps & { recentlyViewed: number[] }) {
-  const featured = BUSINESSES.filter(b => b.featured)
-  const trending = BUSINESSES.filter(b => !b.featured).slice(0, 6)
-  const trendingProducts = PRODUCTS.filter(p => p.status === 'Active').slice(0, 4)
+export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favorites, toggleFavorite, recentlyViewedBrands, cardStyle }: CommonProps & { recentlyViewedBrands: Business[] }) {
+  const [featuredBrands, setFeaturedBrands] = useState<Business[]>([])
+  const [trendingProducts, setTrendingProducts] = useState<Product[]>([])
+  const [discoverBrands, setDiscoverBrands] = useState<Business[]>([])
+  const [stats, setStats] = useState({ suppliers: 0, products: 0 })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      const supabase = createClient()
+      const [brandsRes, productsRes, brandCountRes, productCountRes] = await Promise.all([
+        supabase.from('brands').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(12),
+        supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(4),
+        supabase.from('brands').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
+      ])
+      if (!mounted) return
+      const brands = (brandsRes.data || []).map(dbBrandToBusiness)
+      setFeaturedBrands(brands.slice(0, 6))
+      setDiscoverBrands(brands.slice(6))
+      setTrendingProducts((productsRes.data || []).map(dbProductToProduct))
+      setStats({ suppliers: brandCountRes.count || 0, products: productCountRes.count || 0 })
+      setLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   return (
     <div className="container fade-up">
@@ -33,7 +59,7 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
         <div className="hero-content">
           <div className="hero-eyebrow">
             <span className="dot" />
-            <span>1,200+ verified suppliers</span>
+            <span>{stats.suppliers > 0 ? `${stats.suppliers.toLocaleString()}+ verified suppliers` : 'Verified suppliers'}</span>
           </div>
           <h1 className="hero-title">The B2B network<br />built for serious buyers.</h1>
           <p className="hero-sub">Find verified suppliers, request quotes, and source at scale. From IoT components to logistics — one network.</p>
@@ -42,8 +68,8 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
             <Button variant="primary" type="submit" icon="search">Search</Button>
           </form>
           <div className="hero-stats">
-            <div><div className="hero-stat-num">1,247</div><div className="hero-stat-label">Suppliers</div></div>
-            <div><div className="hero-stat-num">8,930</div><div className="hero-stat-label">Products</div></div>
+            <div><div className="hero-stat-num">{stats.suppliers > 0 ? stats.suppliers.toLocaleString() : '—'}</div><div className="hero-stat-label">Suppliers</div></div>
+            <div><div className="hero-stat-num">{stats.products > 0 ? stats.products.toLocaleString() : '—'}</div><div className="hero-stat-label">Products</div></div>
             <div><div className="hero-stat-num">$2.4B</div><div className="hero-stat-label">In RFQs YTD</div></div>
             <div><div className="hero-stat-num">98%</div><div className="hero-stat-label">Verified</div></div>
           </div>
@@ -72,16 +98,22 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
           </div>
           <Button variant="ghost" size="sm" iconRight="arrow-right" onClick={() => goTo('listing')}>See all</Button>
         </div>
-        <div className="grid-businesses">
-          {featured.map(b => (
-            <BusinessCard key={b.id} business={b} cardStyle={cardStyle}
-              favorited={favorites.includes(b.id)}
-              onFavorite={() => toggleFavorite(b.id)}
-              onNavigate={() => { setSelectedBusiness(b); goTo('detail') }}
-              onMessage={() => { setSelectedBusiness(b); goTo('message-form') }}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid-businesses">{[1,2,3,4,5,6].map(i => <SkeletonCard key={i} height={300} />)}</div>
+        ) : featuredBrands.length === 0 ? (
+          <EmptyState icon="briefcase" title="No suppliers yet" sub="Check back soon — verified businesses are joining every day." />
+        ) : (
+          <div className="grid-businesses">
+            {featuredBrands.map(b => (
+              <BusinessCard key={b.id} business={b} cardStyle={cardStyle}
+                favorited={favorites.includes(b.id)}
+                onFavorite={() => toggleFavorite(b.id)}
+                onNavigate={() => { setSelectedBusiness(b); goTo('detail') }}
+                onMessage={() => { setSelectedBusiness(b); goTo('message-form') }}
+              />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Trending products */}
@@ -93,20 +125,23 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
           </div>
           <Button variant="ghost" size="sm" iconRight="arrow-right" onClick={() => goTo('listing', { tab: 'products' })}>Browse products</Button>
         </div>
-        <div className="grid-products">
-          {trendingProducts.map(p => {
-            const biz = BUSINESSES.find(b => b.id === p.businessId)
-            return (
-              <ProductCard key={p.id} product={p} business={biz} cardStyle={cardStyle}
-                onClick={() => { setSelectedProduct(p); setSelectedBusiness(biz || null); goTo('product-detail') }}
+        {loading ? (
+          <div className="grid-products">{[1,2,3,4].map(i => <SkeletonCard key={i} height={260} />)}</div>
+        ) : trendingProducts.length === 0 ? (
+          <EmptyState icon="box" title="No products yet" sub="Products will appear here once suppliers start listing." />
+        ) : (
+          <div className="grid-products">
+            {trendingProducts.map(p => (
+              <ProductCard key={p.id} product={p} cardStyle={cardStyle}
+                onClick={() => { setSelectedProduct(p); goTo('product-detail') }}
               />
-            )
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* Recently viewed */}
-      {recentlyViewed.length > 0 && (
+      {recentlyViewedBrands.length > 0 && (
         <section className="section">
           <div className="section-header">
             <div>
@@ -115,18 +150,14 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
             </div>
           </div>
           <div className="grid-businesses">
-            {recentlyViewed.slice(0, 3).map(id => {
-              const b = BUSINESSES.find(x => x.id === id)
-              if (!b) return null
-              return (
-                <BusinessCard key={b.id} business={b} cardStyle={cardStyle}
-                  favorited={favorites.includes(b.id)}
-                  onFavorite={() => toggleFavorite(b.id)}
-                  onNavigate={() => { setSelectedBusiness(b); goTo('detail') }}
-                  onMessage={() => { setSelectedBusiness(b); goTo('message-form') }}
-                />
-              )
-            })}
+            {recentlyViewedBrands.slice(0, 3).map(b => (
+              <BusinessCard key={b.id} business={b} cardStyle={cardStyle}
+                favorited={favorites.includes(b.id)}
+                onFavorite={() => toggleFavorite(b.id)}
+                onNavigate={() => { setSelectedBusiness(b); goTo('detail') }}
+                onMessage={() => { setSelectedBusiness(b); goTo('message-form') }}
+              />
+            ))}
           </div>
         </section>
       )}
@@ -139,16 +170,20 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
             <h2 className="section-title">Discover suppliers</h2>
           </div>
         </div>
-        <div className="grid-businesses">
-          {trending.map(b => (
-            <BusinessCard key={b.id} business={b} cardStyle={cardStyle}
-              favorited={favorites.includes(b.id)}
-              onFavorite={() => toggleFavorite(b.id)}
-              onNavigate={() => { setSelectedBusiness(b); goTo('detail') }}
-              onMessage={() => { setSelectedBusiness(b); goTo('message-form') }}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid-businesses">{[1,2,3,4,5,6].map(i => <SkeletonCard key={i} height={300} />)}</div>
+        ) : discoverBrands.length === 0 ? null : (
+          <div className="grid-businesses">
+            {discoverBrands.map(b => (
+              <BusinessCard key={b.id} business={b} cardStyle={cardStyle}
+                favorited={favorites.includes(b.id)}
+                onFavorite={() => toggleFavorite(b.id)}
+                onNavigate={() => { setSelectedBusiness(b); goTo('detail') }}
+                onMessage={() => { setSelectedBusiness(b); goTo('message-form') }}
+              />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )
@@ -163,22 +198,36 @@ export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, f
   const [selectedPrice, setSelectedPrice] = useState('All Prices')
   const [sortOrder, setSortOrder] = useState('relevance')
   const [exploreTab, setExploreTab] = useState(initialFilter?.tab || 'businesses')
+  const [allBrands, setAllBrands] = useState<Business[]>([])
+  const [allProducts, setAllProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    setIsLoading(true)
-    const t = setTimeout(() => setIsLoading(false), 450)
-    return () => clearTimeout(t)
-  }, [searchQuery, selectedCategory, selectedLocation, selectedRating, selectedPrice, sortOrder, exploreTab])
+    let mounted = true
+    async function load() {
+      setIsLoading(true)
+      const supabase = createClient()
+      const [brandsRes, productsRes] = await Promise.all([
+        supabase.from('brands').select('*').eq('is_active', true).order('created_at', { ascending: false }),
+        supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false }),
+      ])
+      if (!mounted) return
+      setAllBrands((brandsRes.data || []).map(dbBrandToBusiness))
+      setAllProducts((productsRes.data || []).map(dbProductToProduct))
+      setIsLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
 
   const filtered = useMemo(() => {
-    let f = [...BUSINESSES]
+    let f = [...allBrands]
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       f = f.filter(b => b.name.toLowerCase().includes(q) || b.description.toLowerCase().includes(q) || b.category.toLowerCase().includes(q) || b.location.toLowerCase().includes(q))
     }
     if (selectedCategory !== 'All Industries') f = f.filter(b => b.category === selectedCategory)
-    if (selectedLocation !== 'All Locations') f = f.filter(b => b.location === selectedLocation)
+    if (selectedLocation !== 'All Locations') f = f.filter(b => b.location.includes(selectedLocation.split(',')[0]))
     if (selectedRating === '5 Stars') f = f.filter(b => b.rating === 5)
     else if (selectedRating === '4+ Stars') f = f.filter(b => b.rating >= 4)
     else if (selectedRating === '3+ Stars') f = f.filter(b => b.rating >= 3)
@@ -187,7 +236,17 @@ export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, f
     if (sortOrder === 'z-a') f.sort((a, b) => b.name.localeCompare(a.name))
     if (sortOrder === 'rating') f.sort((a, b) => b.rating - a.rating || b.reviews - a.reviews)
     return f
-  }, [searchQuery, selectedCategory, selectedLocation, selectedRating, selectedPrice, sortOrder])
+  }, [allBrands, searchQuery, selectedCategory, selectedLocation, selectedRating, selectedPrice, sortOrder])
+
+  const filteredProducts = useMemo(() => {
+    let f = [...allProducts]
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      f = f.filter(p => p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.category.toLowerCase().includes(q))
+    }
+    if (selectedCategory !== 'All Industries') f = f.filter(p => p.category === selectedCategory)
+    return f
+  }, [allProducts, searchQuery, selectedCategory])
 
   const resetFilters = () => {
     setSearchQuery(''); setSelectedCategory('All Industries'); setSelectedLocation('All Locations')
@@ -206,11 +265,11 @@ export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, f
       <PageHeader
         eyebrow="Marketplace"
         title="Explore suppliers"
-        sub={`${BUSINESSES.length} verified businesses across ${CATEGORIES.length} industries`}
+        sub={isLoading ? 'Loading…' : `${allBrands.length} verified businesses across ${CATEGORIES.length} industries`}
         action={
           <Tabs value={exploreTab} onChange={setExploreTab} tabs={[
-            { value: 'businesses', label: 'Businesses', count: BUSINESSES.length },
-            { value: 'products',   label: 'Products',   count: PRODUCTS.length },
+            { value: 'businesses', label: 'Businesses', count: allBrands.length },
+            { value: 'products',   label: 'Products',   count: allProducts.length },
           ]} />
         }
       />
@@ -272,7 +331,9 @@ export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, f
             <div className="flex items-center gap-2 flex-wrap">
               {activeFilters.length === 0 ? (
                 <span className="text-sm text-muted">
-                  Showing <span className="font-mono font-semibold text-ink2">{filtered.length}</span> {exploreTab === 'businesses' ? 'suppliers' : 'products'}
+                  Showing <span className="font-mono font-semibold text-ink2">
+                    {exploreTab === 'businesses' ? filtered.length : filteredProducts.length}
+                  </span> {exploreTab === 'businesses' ? 'suppliers' : 'products'}
                 </span>
               ) : activeFilters.map((f, i) => (
                 <Chip key={i} active removable onRemove={f.clear}>{f.label}</Chip>
@@ -302,10 +363,10 @@ export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, f
           ) : (
             isLoading ? (
               <div className="grid-products">{[1,2,3,4].map(i => <SkeletonCard key={i} height={260} />)}</div>
-            ) : (
+            ) : filteredProducts.length > 0 ? (
               <div className="grid-products">
-                {PRODUCTS.map(p => {
-                  const biz = BUSINESSES.find(b => b.id === p.businessId)
+                {filteredProducts.map(p => {
+                  const biz = allBrands.find(b => b.id === p.businessId)
                   return (
                     <ProductCard key={p.id} product={p} business={biz} cardStyle={cardStyle}
                       onClick={() => { setSelectedProduct(p); setSelectedBusiness(biz || null); goTo('product-detail') }}
@@ -313,6 +374,8 @@ export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, f
                   )
                 })}
               </div>
+            ) : (
+              <EmptyState title="No products match those filters" sub="Try a different search or category." />
             )
           )}
         </main>
@@ -327,13 +390,36 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
   business: Business | null
   goTo: (s: Screen) => void
   setSelectedProduct: (p: Product | null) => void
-  favorites: number[]
-  toggleFavorite: (id: number) => void
+  favorites: string[]
+  toggleFavorite: (id: string) => void
   cardStyle: 'bordered' | 'shadow' | 'minimal'
 }) {
+  const [brandProducts, setBrandProducts] = useState<Product[]>([])
+  const [productsLoading, setProductsLoading] = useState(true)
+
+  useEffect(() => {
+    if (!business) return
+    let mounted = true
+    setProductsLoading(true)
+    async function load() {
+      if (!business) return
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .eq('brand_id', business.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+      if (!mounted) return
+      setBrandProducts((data || []).map(dbProductToProduct))
+      setProductsLoading(false)
+    }
+    load()
+    return () => { mounted = false }
+  }, [business?.id])
+
   if (!business) return null
   const favorited = favorites.includes(business.id)
-  const products = PRODUCTS.slice(0, 4)
 
   return (
     <div className="fade-up">
@@ -361,15 +447,14 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
               </div>
               <div className="flex items-center text-sm text-ink2" style={{ gap: '4px 14px', flexWrap: 'wrap' }}>
                 <Stars rating={business.rating} count={business.reviews} />
-                <span className="flex items-center gap-1"><Icon name="pin" size={13} />{business.location}</span>
-                <span className="font-mono text-muted">Founded {business.founded}</span>
+                {business.location && <span className="flex items-center gap-1"><Icon name="pin" size={13} />{business.location}</span>}
+                <span className="font-mono text-muted">Est. {business.founded}</span>
               </div>
             </div>
             <div className="flex gap-2 flex-wrap" style={{ flexShrink: 0 }}>
               <Button variant="secondary" icon={favorited ? 'heart-fill' : 'heart'} onClick={() => toggleFavorite(business.id)}>
                 {favorited ? 'Saved' : 'Save'}
               </Button>
-              <Button variant="secondary" icon="phone">Call</Button>
               <Button variant="primary" icon="message" onClick={() => goTo('message-form')}>Message</Button>
             </div>
           </div>
@@ -377,7 +462,7 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
           {/* Stats strip */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, padding: '24px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
             {[
-              { l: 'Products', v: '8' },
+              { l: 'Products', v: productsLoading ? '…' : String(brandProducts.length) },
               { l: 'Rating', v: `${business.rating}.0` },
               { l: 'Reviews', v: String(business.reviews) },
               { l: 'Employees', v: business.employees },
@@ -396,9 +481,7 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
           <section className="section" style={{ padding: 0, marginBottom: 32 }}>
             <h2 className="section-title mb-4">About</h2>
             <div className="card" style={{ padding: 24 }}>
-              <p className="text-ink2 text-base" style={{ lineHeight: 1.6 }}>
-                {business.description} With over {2026 - business.founded} years of experience and a {business.employees} team, we partner with companies across {business.category.toLowerCase()} to deliver outcomes that hold up under audit.
-              </p>
+              <p className="text-ink2 text-base" style={{ lineHeight: 1.6 }}>{business.description}</p>
             </div>
           </section>
 
@@ -406,14 +489,22 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
           <section className="section">
             <div className="section-header">
               <h2 className="section-title">Products</h2>
-              <Button variant="ghost" size="sm" iconRight="arrow-right">View all 8</Button>
+              {brandProducts.length > 4 && (
+                <Button variant="ghost" size="sm" iconRight="arrow-right">View all {brandProducts.length}</Button>
+              )}
             </div>
-            <div className="grid-products">
-              {products.map(p => (
-                <ProductCard key={p.id} product={p} cardStyle={cardStyle}
-                  onClick={() => { setSelectedProduct(p); goTo('product-detail') }} />
-              ))}
-            </div>
+            {productsLoading ? (
+              <div className="grid-products">{[1,2,3,4].map(i => <SkeletonCard key={i} height={260} />)}</div>
+            ) : brandProducts.length === 0 ? (
+              <EmptyState icon="box" title="No products listed yet" sub="This supplier hasn't added any products." />
+            ) : (
+              <div className="grid-products">
+                {brandProducts.slice(0, 4).map(p => (
+                  <ProductCard key={p.id} product={p} cardStyle={cardStyle}
+                    onClick={() => { setSelectedProduct(p); goTo('product-detail') }} />
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Reviews */}
@@ -555,14 +646,15 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
 }
 
 /* ── SavedScreen ────────────────────────────── */
-export function SavedScreen({ goTo, favorites, toggleFavorite, setSelectedBusiness, cardStyle }: {
+export function SavedScreen({ goTo, favorites, toggleFavorite, setSelectedBusiness, brandsCache, cardStyle }: {
   goTo: (s: Screen) => void
-  favorites: number[]
-  toggleFavorite: (id: number) => void
+  favorites: string[]
+  toggleFavorite: (id: string) => void
   setSelectedBusiness: (b: Business | null) => void
+  brandsCache: Record<string, Business>
   cardStyle: 'bordered' | 'shadow' | 'minimal'
 }) {
-  const saved = BUSINESSES.filter(b => favorites.includes(b.id))
+  const saved = favorites.map(id => brandsCache[id]).filter(Boolean) as Business[]
   return (
     <div className="container fade-up">
       <PageHeader eyebrow="Your collection" title="Saved suppliers" sub={`${saved.length} ${saved.length === 1 ? 'business' : 'businesses'} bookmarked`} />
