@@ -19,9 +19,10 @@ interface NavProps {
   unreadCount: number
   savedCount?: number
   isProMember?: boolean
+  isSignedIn?: boolean
 }
 
-export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMember = false }: NavProps) {
+export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMember = false, isSignedIn = false }: NavProps) {
   return (
     <nav className="topnav">
       <div className="topnav-inner">
@@ -59,8 +60,16 @@ export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMe
           {!isProMember && (
             <Button variant="dark" size="sm" icon="sparkle" onClick={() => setScreen('subscription' as Screen)}>Upgrade</Button>
           )}
-          <button onClick={() => setScreen('profile')} aria-label="Profile" style={{ display: 'inline-flex' }}>
-            <Avatar initials="MB" size="sm" />
+          <button
+            onClick={() => setScreen('profile')}
+            aria-label="Profile"
+            className={isSignedIn ? '' : 'btn btn-ghost btn-icon'}
+            style={{ display: 'inline-flex' }}
+          >
+            {isSignedIn
+              ? <Avatar initials="MB" size="sm" />
+              : <Icon name="user" size={18} />
+            }
           </button>
         </div>
       </div>

@@ -259,6 +259,7 @@ export default function App() {
         unreadCount={unreadCount}
         savedCount={favorites.length}
         isProMember={isProMember}
+        isSignedIn={!!user}
       />
       <main className="main-content">
         {renderScreen()}
