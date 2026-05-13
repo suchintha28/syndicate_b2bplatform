@@ -183,6 +183,7 @@ export type Screen =
   | 'success'
   | 'profile' | 'manage-profile' | 'manage-products' | 'add-product' | 'edit-product'
   | 'settings' | 'subscription'
+  | 'auth'
 
 export interface NavOpts {
   category?: string

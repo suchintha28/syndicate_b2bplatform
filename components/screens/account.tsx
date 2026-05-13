@@ -20,10 +20,11 @@ function ProLock({ onUpgrade, label }: { onUpgrade: () => void; label: string })
 }
 
 /* ── ProfileScreen ──────────────────────────── */
-export function ProfileScreen({ goTo, isProMember, userProfile }: {
+export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut }: {
   goTo: (s: Screen) => void
   isProMember: boolean
   userProfile: UserProfile
+  onSignOut?: () => void
 }) {
   return (
     <div className="container fade-up" style={{ paddingBottom: 64 }}>
@@ -104,6 +105,22 @@ export function ProfileScreen({ goTo, isProMember, userProfile }: {
               ))}
             </div>
           </div>
+
+          {/* Sign out */}
+          {onSignOut && (
+            <div style={{ marginTop: 16 }}>
+              <button
+                onClick={onSignOut}
+                className="card card-hover"
+                style={{ width: '100%', padding: 18, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+              >
+                <div style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', background: 'var(--danger-soft)', display: 'grid', placeItems: 'center' }}>
+                  <Icon name="log-out" size={18} stroke="var(--danger)" />
+                </div>
+                <span className="font-display font-semibold" style={{ color: 'var(--danger)' }}>Sign out</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Activity */}

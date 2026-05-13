@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import type { User } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 import { TopNav, BottomNav } from '@/components/nav'
+import { AuthScreen } from '@/components/screens/auth'
 import {
   HomeScreen,
   ExploreScreen,
@@ -54,6 +57,7 @@ export default function App() {
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE)
   const [favorites, setFavorites] = useState<number[]>([])
   const [recentlyViewed, setRecentlyViewed] = useState<number[]>([])
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
     try {
@@ -72,10 +76,29 @@ export default function App() {
     try { localStorage.setItem('syndicate_recently_viewed', JSON.stringify(recentlyViewed)) } catch {}
   }, [recentlyViewed])
 
+  // Auth state — subscribe once, update user on every session change
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => setUser(user))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
   const goTo = useCallback((s: Screen, opts?: NavOpts) => {
+    // Guests trying to reach profile land on the auth screen instead
+    const dest: Screen = (s === 'profile' && !user) ? 'auth' : s
     if (opts) setExploreFilter(opts)
     window.scrollTo({ top: 0, behavior: 'instant' })
-    setScreen(s)
+    setScreen(dest)
+  }, [user])
+
+  const signOut = useCallback(async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setUser(null)
+    setScreen('home')
   }, [])
 
   const setSelectedBusiness = useCallback((b: Business | null) => {
@@ -158,12 +181,15 @@ export default function App() {
         return <MessageFormScreen goTo={goTo} business={selectedBusiness} />
       case 'success':
         return <SuccessScreen goTo={goTo} />
+      case 'auth':
+        return <AuthScreen goTo={goTo} />
       case 'profile':
         return (
           <ProfileScreen
             goTo={goTo}
             isProMember={isProMember}
             userProfile={userProfile}
+            onSignOut={signOut}
           />
         )
       case 'manage-profile':

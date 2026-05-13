@@ -59,6 +59,7 @@ export function Icon({ name, size = 18, stroke = 'currentColor', strokeWidth = 2
     case 'globe':        return <svg {...props}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
     case 'briefcase':    return <svg {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
     case 'sparkle':      return <svg {...props}><path d="M12 3l1.5 5L18 9.5 13.5 11 12 16l-1.5-5L6 9.5l4.5-1.5L12 3z"/></svg>
+    case 'log-out':      return <svg {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     default:             return <svg {...props}><circle cx="12" cy="12" r="10"/></svg>
   }
 }
