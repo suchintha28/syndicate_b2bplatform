@@ -54,10 +54,12 @@ export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMe
               <span style={{ position: 'absolute', top: 4, right: 4, width: 7, height: 7, borderRadius: 999, background: 'var(--primary)' }} />
             )}
           </button>
-          <button className="btn btn-ghost btn-icon" aria-label="Notifications">
-            <Icon name="bell" size={18} />
-          </button>
-          {!isProMember && (
+          {isSignedIn && (
+            <button className="btn btn-ghost btn-icon" aria-label="Notifications">
+              <Icon name="bell" size={18} />
+            </button>
+          )}
+          {isSignedIn && !isProMember && (
             <Button variant="dark" size="sm" icon="sparkle" onClick={() => setScreen('subscription' as Screen)}>Upgrade</Button>
           )}
           <button

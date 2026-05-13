@@ -7,7 +7,7 @@ import { RFQCard, MessageCard } from '@/components/cards'
 import { BROWSE_RFQS, MY_RFQS, MESSAGES, CATEGORIES, type Business, type Screen } from '@/lib/data'
 
 /* ── RFQsScreen ─────────────────────────────── */
-export function RFQsScreen({ goTo }: { goTo: (s: Screen) => void }) {
+export function RFQsScreen({ goTo, isSignedIn = false }: { goTo: (s: Screen) => void; isSignedIn?: boolean }) {
   const [tab, setTab] = useState('browse')
 
   return (
@@ -16,13 +16,13 @@ export function RFQsScreen({ goTo }: { goTo: (s: Screen) => void }) {
         eyebrow="Request for quote"
         title="RFQ marketplace"
         sub="Browse open buyer requests or post your own."
-        action={<Button variant="primary" icon="plus" onClick={() => goTo('rfq-create')}>New RFQ</Button>}
+        action={isSignedIn ? <Button variant="primary" icon="plus" onClick={() => goTo('rfq-create')}>New RFQ</Button> : undefined}
       />
 
       <div className="flex items-center justify-between flex-wrap gap-3 mb-6">
         <Tabs value={tab} onChange={setTab} tabs={[
           { value: 'browse', label: 'Open requests', count: BROWSE_RFQS.length },
-          { value: 'my',     label: 'My RFQs',       count: MY_RFQS.length },
+          ...(isSignedIn ? [{ value: 'my', label: 'My RFQs', count: MY_RFQS.length }] : []),
         ]} />
         {tab === 'browse' && (
           <div className="flex items-center gap-2 flex-wrap">

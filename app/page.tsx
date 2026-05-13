@@ -87,8 +87,10 @@ export default function App() {
   }, [])
 
   const goTo = useCallback((s: Screen, opts?: NavOpts) => {
-    // Guests trying to reach profile land on the auth screen instead
-    const dest: Screen = (s === 'profile' && !user) ? 'auth' : s
+    // Redirect guests away from all private screens to auth
+    const GUEST_RESTRICTED: Screen[] = ['profile', 'messages', 'message-form', 'rfq-create',
+      'manage-profile', 'manage-products', 'add-product', 'edit-product', 'settings', 'subscription']
+    const dest: Screen = (!user && GUEST_RESTRICTED.includes(s)) ? 'auth' : s
     if (opts) setExploreFilter(opts)
     window.scrollTo({ top: 0, behavior: 'instant' })
     setScreen(dest)
@@ -112,7 +114,7 @@ export default function App() {
     setFavorites(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }, [])
 
-  const unreadCount = MESSAGES.filter(m => m.unread).length
+  const unreadCount = user ? MESSAGES.filter(m => m.unread).length : 0
   const cardStyle = 'bordered' as const
 
   function renderScreen() {
@@ -172,7 +174,7 @@ export default function App() {
           />
         )
       case 'rfqs':
-        return <RFQsScreen goTo={goTo} />
+        return <RFQsScreen goTo={goTo} isSignedIn={!!user} />
       case 'rfq-create':
         return <RFQCreateScreen goTo={goTo} />
       case 'messages':
