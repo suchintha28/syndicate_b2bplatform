@@ -37,13 +37,13 @@ import {
 } from '@/lib/data'
 
 const DEFAULT_PROFILE: UserProfile = {
-  businessName: 'Colombo Trading Co.',
-  logo: 'MB',
-  category: 'Technology',
-  email: 'malith@colombotrading.lk',
-  phone: '+94 77 123 4567',
-  website: 'colombotrading.lk',
-  description: 'A Sri Lanka-based B2B trading company sourcing technology and manufacturing components.',
+  businessName: '',
+  logo: '?',
+  category: '',
+  email: '',
+  phone: '',
+  website: '',
+  description: '',
   bannerColor: '#4f46e5',
 }
 
@@ -86,6 +86,45 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // Fetch real profile + brand data whenever the signed-in user changes
+  useEffect(() => {
+    if (!user) {
+      setUserProfile(DEFAULT_PROFILE)
+      return
+    }
+
+    const supabase = createClient()
+
+    async function loadProfile() {
+      const [{ data: profile }, { data: brand }] = await Promise.all([
+        supabase.from('profiles').select('*').eq('id', user!.id).single(),
+        supabase.from('brands').select('*').eq('owner_id', user!.id).maybeSingle(),
+      ])
+
+      if (!profile) return
+
+      const parts = (profile.full_name || '').trim().split(/\s+/).filter(Boolean)
+      const initials = parts.length >= 2
+        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+        : (profile.full_name || '').slice(0, 2).toUpperCase() || '?'
+
+      setUserProfile({
+        fullName:     profile.full_name,
+        businessName: brand?.name || profile.full_name || 'My Account',
+        logo:         initials,
+        category:     brand?.categories[0] || '',
+        email:        profile.email,
+        phone:        profile.phone || '',
+        website:      brand?.website || '',
+        description:  brand?.description || '',
+        bannerColor:  DEFAULT_PROFILE.bannerColor,
+        role:         profile.role,
+      })
+    }
+
+    loadProfile()
+  }, [user])
 
   const goTo = useCallback((s: Screen, opts?: NavOpts) => {
     // Redirect guests away from all private screens to auth

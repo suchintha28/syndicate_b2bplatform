@@ -176,6 +176,8 @@ export interface UserProfile {
   website: string
   description: string
   bannerColor: string
+  role?: 'buyer' | 'seller'
+  fullName?: string
 }
 
 export type Screen =

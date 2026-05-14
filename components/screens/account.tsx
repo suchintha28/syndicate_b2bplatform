@@ -139,7 +139,7 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
       />
     )}
     <div className="container fade-up" style={{ paddingBottom: 64 }}>
-      <PageHeader eyebrow="Account" title="Your business" />
+      <PageHeader eyebrow="Account" title={userProfile.role === 'seller' ? 'Your business' : 'Your account'} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }} className="profile-grid">
         <div>
@@ -150,32 +150,69 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
               <div className="flex items-start gap-4 mb-6 flex-wrap">
                 <Avatar initials={userProfile.logo} size="xl" />
                 <div className="flex-1" style={{ minWidth: 220 }}>
-                  <h2 className="font-display font-bold text-2xl mb-1">{userProfile.businessName}</h2>
-                  <div className="text-muted mb-3">{userProfile.category}</div>
+                  <h2 className="font-display font-bold text-2xl mb-1">
+                    {userProfile.businessName || userProfile.fullName || 'My Account'}
+                  </h2>
+                  {userProfile.category && (
+                    <div className="text-muted mb-3">{userProfile.category}</div>
+                  )}
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant={isProMember ? 'pro' : 'neutral'} icon={isProMember ? 'sparkle' : undefined}>
                       {isProMember ? 'Pro Member' : 'Free Plan'}
                     </Badge>
-                    <Badge variant="verified" icon="check">Verified</Badge>
+                    {userProfile.role === 'seller' && (
+                      <Badge variant="verified" icon="check">Seller</Badge>
+                    )}
+                    {userProfile.role === 'buyer' && (
+                      <Badge variant="neutral">Buyer</Badge>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 16, padding: '20px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
-                {[
-                  { l: 'Products',     v: PRODUCTS.length },
-                  { l: 'Open RFQs',   v: MY_RFQS.filter(r => r.status === 'Open').length },
-                  { l: 'Profile views', v: '127' },
-                  { l: 'Conversion',  v: '4.2%' },
-                ].map((s, i) => (
-                  <div key={i}>
-                    <div className="uppercase-label mb-1">{s.l}</div>
-                    <div className="font-display font-bold text-xl">{s.v}</div>
-                  </div>
-                ))}
-              </div>
+              {/* Seller: prompt to set up brand if none exists */}
+              {userProfile.role === 'seller' && !userProfile.businessName && (
+                <div style={{ background: 'var(--primary-soft)', border: '1px solid var(--primary)', borderRadius: 'var(--r-md)', padding: 20, marginBottom: 20 }}>
+                  <div className="font-display font-semibold mb-1">Set up your brand profile</div>
+                  <div className="text-sm text-muted mb-3">Create your brand listing so buyers can find you on the marketplace.</div>
+                  <Button variant="primary" size="sm" icon="arrow-right" onClick={() => { window.location.href = '/onboarding/brand' }}>
+                    Create brand profile
+                  </Button>
+                </div>
+              )}
 
-              {!isProMember && (
+              {userProfile.role === 'seller' && userProfile.businessName && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 16, padding: '20px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
+                  {[
+                    { l: 'Products',      v: PRODUCTS.length },
+                    { l: 'Open RFQs',     v: MY_RFQS.filter(r => r.status === 'Open').length },
+                    { l: 'Profile views', v: '—' },
+                    { l: 'Conversion',    v: '—' },
+                  ].map((s, i) => (
+                    <div key={i}>
+                      <div className="uppercase-label mb-1">{s.l}</div>
+                      <div className="font-display font-bold text-xl">{s.v}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {userProfile.role === 'buyer' && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 16, padding: '20px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
+                  {[
+                    { l: 'RFQs sent',   v: MY_RFQS.length },
+                    { l: 'Responses',   v: '—' },
+                    { l: 'Saved brands', v: '—' },
+                  ].map((s, i) => (
+                    <div key={i}>
+                      <div className="uppercase-label mb-1">{s.l}</div>
+                      <div className="font-display font-bold text-xl">{s.v}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!isProMember && userProfile.role === 'seller' && (
                 <div style={{ background: 'var(--ink)', borderRadius: 'var(--r-md)', padding: 20, color: 'white' }}>
                   <div className="flex items-center gap-3 mb-3 flex-wrap">
                     <div style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', background: 'var(--primary)', display: 'grid', placeItems: 'center' }}>
@@ -197,10 +234,10 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
             <div className="uppercase-label mb-3">Manage</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {[
-                { label: 'Edit profile', sub: 'Business info, contact details, custom pages', screen: 'manage-profile' as Screen, icon: 'briefcase' },
-                { label: 'Products',     sub: `${PRODUCTS.length} products · ${PRODUCTS.filter(p => p.status === 'Active').length} active`, screen: 'manage-products' as Screen, icon: 'box' },
-                { label: 'Settings',     sub: 'Notifications, privacy, app preferences', screen: 'settings' as Screen, icon: 'sliders' },
-              ].map(item => (
+                { label: 'Edit profile', sub: userProfile.role === 'seller' ? 'Business info, contact details, custom pages' : 'Your name, email, contact details', screen: 'manage-profile' as Screen, icon: 'briefcase', show: true },
+                { label: 'Products',     sub: `${PRODUCTS.length} products · ${PRODUCTS.filter(p => p.status === 'Active').length} active`, screen: 'manage-products' as Screen, icon: 'box', show: userProfile.role === 'seller' },
+                { label: 'Settings',     sub: 'Notifications, privacy, app preferences', screen: 'settings' as Screen, icon: 'sliders', show: true },
+              ].filter(item => item.show).map(item => (
                 <button key={item.screen} className="card card-hover"
                   onClick={() => goTo(item.screen)}
                   style={{ padding: 18, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
