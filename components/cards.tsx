@@ -40,7 +40,7 @@ export function BusinessCard({ business, cardStyle = 'bordered', favorited, onFa
       </div>
       <div style={{ padding: 'var(--card-pad)', display: 'flex', flexDirection: 'column', flex: 1, gap: 12 }}>
         <div className="flex items-start gap-3">
-          <Avatar initials={business.logo} size="md" />
+          <Avatar src={business.logoUrl} initials={business.logo} size="md" />
           <div className="flex-1" style={{ minWidth: 0 }}>
             <div className="mb-1" style={{ lineHeight: 1.25 }}>
               <span className="font-display font-bold" style={{ fontSize: 15.5 }}>{business.name}</span>
@@ -90,7 +90,7 @@ export function ProductCard({ product, business, cardStyle = 'bordered', onClick
       <div style={{ padding: 16 }}>
         {business && (
           <div className="flex items-center gap-2 mb-2">
-            <Avatar initials={business.logo} size="sm" />
+            <Avatar src={business.logoUrl} initials={business.logo} size="sm" />
             <span className="text-xs text-muted truncate">{business.name}</span>
           </div>
         )}

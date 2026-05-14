@@ -21,9 +21,10 @@ interface NavProps {
   isProMember?: boolean
   isSignedIn?: boolean
   userInitials?: string
+  userAvatarUrl?: string
 }
 
-export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMember = false, isSignedIn = false, userInitials = '?' }: NavProps) {
+export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMember = false, isSignedIn = false, userInitials = '?', userAvatarUrl }: NavProps) {
   return (
     <nav className="topnav">
       <div className="topnav-inner">
@@ -74,7 +75,7 @@ export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMe
             style={{ display: 'inline-flex' }}
           >
             {isSignedIn
-              ? <Avatar initials={userInitials} size="sm" />
+              ? <Avatar src={userAvatarUrl} initials={userInitials} size="sm" />
               : <Icon name="user" size={18} />
             }
           </button>

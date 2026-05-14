@@ -402,6 +402,7 @@ export default function App() {
         isProMember={isProMember}
         isSignedIn={!!user}
         userInitials={userInitials}
+        userAvatarUrl={userProfile.avatarUrl}
       />
       <main className="main-content">
         {renderScreen()}
