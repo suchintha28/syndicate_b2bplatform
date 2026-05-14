@@ -20,9 +20,10 @@ interface NavProps {
   savedCount?: number
   isProMember?: boolean
   isSignedIn?: boolean
+  userInitials?: string
 }
 
-export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMember = false, isSignedIn = false }: NavProps) {
+export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMember = false, isSignedIn = false, userInitials = '?' }: NavProps) {
   return (
     <nav className="topnav">
       <div className="topnav-inner">
@@ -37,8 +38,12 @@ export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMe
               className={`topnav-link ${screen === item.id || (item.id === 'listing' && screen === 'detail') ? 'active' : ''}`}
               onClick={() => setScreen(item.id)}
             >
-              {item.label}
-              {item.id === 'messages' && unreadCount > 0 && <span className="nav-badge">{unreadCount}</span>}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                {item.label}
+                {item.id === 'messages' && unreadCount > 0 && (
+                  <span className="nav-badge">{unreadCount}</span>
+                )}
+              </span>
             </button>
           ))}
         </div>
@@ -69,7 +74,7 @@ export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMe
             style={{ display: 'inline-flex' }}
           >
             {isSignedIn
-              ? <Avatar initials="MB" size="sm" />
+              ? <Avatar initials={userInitials} size="sm" />
               : <Icon name="user" size={18} />
             }
           </button>

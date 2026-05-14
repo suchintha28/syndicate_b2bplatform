@@ -122,6 +122,17 @@ export default function App() {
     [recentlyViewed, brandsCache]
   )
 
+  // Derive avatar initials from the signed-in user's full name
+  const userInitials = useMemo(() => {
+    const name = (user?.user_metadata?.full_name as string | undefined) || ''
+    if (name) {
+      const parts = name.trim().split(/\s+/).filter(Boolean)
+      if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      return name.slice(0, 2).toUpperCase()
+    }
+    return user?.email?.slice(0, 2).toUpperCase() || '?'
+  }, [user])
+
   const unreadCount = user ? MESSAGES.filter(m => m.unread).length : 0
   const cardStyle = 'bordered' as const
 
@@ -271,6 +282,7 @@ export default function App() {
         savedCount={favorites.length}
         isProMember={isProMember}
         isSignedIn={!!user}
+        userInitials={userInitials}
       />
       <main className="main-content">
         {renderScreen()}

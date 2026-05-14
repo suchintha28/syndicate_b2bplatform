@@ -70,7 +70,7 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
           <div className="hero-stats">
             <div><div className="hero-stat-num">{stats.suppliers > 0 ? stats.suppliers.toLocaleString() : '—'}</div><div className="hero-stat-label">Suppliers</div></div>
             <div><div className="hero-stat-num">{stats.products > 0 ? stats.products.toLocaleString() : '—'}</div><div className="hero-stat-label">Products</div></div>
-            <div><div className="hero-stat-num">$2.4B</div><div className="hero-stat-label">In RFQs YTD</div></div>
+            <div><div className="hero-stat-num">LKR 480B</div><div className="hero-stat-label">In RFQs YTD</div></div>
             <div><div className="hero-stat-num">98%</div><div className="hero-stat-label">Verified</div></div>
           </div>
         </div>

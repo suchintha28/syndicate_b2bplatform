@@ -4,8 +4,37 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+const INDUSTRIES = [
+  'Manufacturing',
+  'Technology & IT',
+  'Construction & Real Estate',
+  'Logistics & Transport',
+  'Food & Beverages',
+  'Professional Services',
+  'Healthcare & Pharmaceuticals',
+  'Agriculture & Farming',
+  'Retail & Distribution',
+  'Finance & Banking',
+  'Hospitality & Tourism',
+  'Education & Training',
+  'Textile & Apparel',
+  'Automotive & Machinery',
+  'Energy & Utilities',
+  'Media & Printing',
+  'Chemicals & Raw Materials',
+  'Other',
+]
+
 export default function RegisterPage() {
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'buyer' })
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    role: 'buyer',
+    businessName: '',
+    industry: 'Manufacturing',
+    industryOther: '',
+  })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -14,9 +43,20 @@ export default function RegisterPage() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(prev => ({ ...prev, [k]: e.target.value }))
 
+  const isSeller = form.role === 'seller'
+  const resolvedIndustry = form.industry === 'Other' ? form.industryOther : form.industry
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (isSeller && !form.businessName.trim()) {
+      setError('Please enter your business name.')
+      return
+    }
+    if (isSeller && form.industry === 'Other' && !form.industryOther.trim()) {
+      setError('Please specify your industry.')
+      return
+    }
     setLoading(true)
 
     try {
@@ -28,6 +68,10 @@ export default function RegisterPage() {
           data: {
             full_name: form.fullName,
             role: form.role,
+            ...(isSeller && {
+              business_name: form.businessName.trim(),
+              industry: resolvedIndustry,
+            }),
           },
         },
       })
@@ -95,67 +139,36 @@ export default function RegisterPage() {
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <label className="field-label">Full name</label>
-            <input
-              className="field"
-              type="text"
-              placeholder="Jane Doe"
-              value={form.fullName}
-              onChange={upd('fullName')}
-              required
-              autoComplete="name"
-            />
+            <input className="field" type="text" placeholder="Jane Doe" value={form.fullName}
+              onChange={upd('fullName')} required autoComplete="name" />
           </div>
 
           <div className="mb-4">
             <label className="field-label">Email</label>
-            <input
-              className="field"
-              type="email"
-              placeholder="you@company.com"
-              value={form.email}
-              onChange={upd('email')}
-              required
-              autoComplete="email"
-            />
+            <input className="field" type="email" placeholder="you@company.com" value={form.email}
+              onChange={upd('email')} required autoComplete="email" />
           </div>
 
           <div className="mb-4">
             <label className="field-label">Password</label>
-            <input
-              className="field"
-              type="password"
-              placeholder="Min. 6 characters"
-              value={form.password}
-              onChange={upd('password')}
-              required
-              minLength={6}
-              autoComplete="new-password"
-            />
+            <input className="field" type="password" placeholder="Min. 6 characters" value={form.password}
+              onChange={upd('password')} required minLength={6} autoComplete="new-password" />
           </div>
 
-          <div className="mb-5">
+          {/* Role picker */}
+          <div className="mb-4">
             <label className="field-label">I am a</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {(['buyer', 'seller'] as const).map(r => (
-                <label
-                  key={r}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '12px 14px',
-                    border: `1px solid ${form.role === r ? 'var(--primary)' : 'var(--border)'}`,
-                    borderRadius: 'var(--r-sm)',
-                    background: form.role === r ? 'var(--primary-soft)' : 'white',
-                    cursor: 'pointer', transition: 'all 0.15s',
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="role"
-                    value={r}
-                    checked={form.role === r}
-                    onChange={upd('role')}
-                    style={{ accentColor: 'var(--primary)' }}
-                  />
+                <label key={r} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px',
+                  border: `1px solid ${form.role === r ? 'var(--primary)' : 'var(--border)'}`,
+                  borderRadius: 'var(--r-sm)',
+                  background: form.role === r ? 'var(--primary-soft)' : 'white',
+                  cursor: 'pointer', transition: 'all 0.15s',
+                }}>
+                  <input type="radio" name="role" value={r} checked={form.role === r}
+                    onChange={upd('role')} style={{ accentColor: 'var(--primary)' }} />
                   <div>
                     <div className="font-display font-semibold" style={{ fontSize: 14, textTransform: 'capitalize' }}>{r}</div>
                     <div className="text-muted" style={{ fontSize: 12 }}>
@@ -166,6 +179,37 @@ export default function RegisterPage() {
               ))}
             </div>
           </div>
+
+          {/* Seller-only fields */}
+          {isSeller && (
+            <div style={{
+              background: 'var(--bg-alt)', borderRadius: 'var(--r-sm)',
+              padding: '14px 14px 2px', marginBottom: 16,
+              border: '1px solid var(--border)',
+            }}>
+              <div className="text-xs font-semibold" style={{ color: 'var(--primary)', marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                Business details
+              </div>
+              <div className="mb-3">
+                <label className="field-label">Business name</label>
+                <input className="field" type="text" placeholder="Acme Industries Ltd."
+                  value={form.businessName} onChange={upd('businessName')} required={isSeller} />
+              </div>
+              <div className="mb-3">
+                <label className="field-label">Industry</label>
+                <select className="field" value={form.industry} onChange={upd('industry')}>
+                  {INDUSTRIES.map(i => <option key={i}>{i}</option>)}
+                </select>
+              </div>
+              {form.industry === 'Other' && (
+                <div className="mb-3">
+                  <label className="field-label">Specify industry</label>
+                  <input className="field" type="text" placeholder="e.g. Marine Engineering"
+                    value={form.industryOther} onChange={upd('industryOther')} required />
+                </div>
+              )}
+            </div>
+          )}
 
           {error && (
             <div style={{
@@ -193,9 +237,7 @@ export default function RegisterPage() {
 
       <p className="text-center text-muted" style={{ fontSize: 14, marginTop: 20 }}>
         Already have an account?{' '}
-        <Link href="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>
-          Sign in
-        </Link>
+        <Link href="/login" style={{ color: 'var(--primary)', fontWeight: 600 }}>Sign in</Link>
       </p>
     </div>
   )

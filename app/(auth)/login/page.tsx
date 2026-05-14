@@ -51,9 +51,9 @@ export default function LoginPage() {
           .eq('owner_id', data.user.id)
           .maybeSingle()
 
-        router.push(brand ? '/dashboard' : '/onboarding/brand')
+        router.push(brand ? '/' : '/onboarding/brand')
       } else {
-        router.push('/dashboard')
+        router.push('/')
       }
 
       router.refresh()

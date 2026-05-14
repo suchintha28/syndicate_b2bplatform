@@ -6,6 +6,27 @@ import type { Screen } from '@/lib/data'
 
 type AuthTab = 'signin' | 'signup'
 
+const INDUSTRIES = [
+  'Manufacturing',
+  'Technology & IT',
+  'Construction & Real Estate',
+  'Logistics & Transport',
+  'Food & Beverages',
+  'Professional Services',
+  'Healthcare & Pharmaceuticals',
+  'Agriculture & Farming',
+  'Retail & Distribution',
+  'Finance & Banking',
+  'Hospitality & Tourism',
+  'Education & Training',
+  'Textile & Apparel',
+  'Automotive & Machinery',
+  'Energy & Utilities',
+  'Media & Printing',
+  'Chemicals & Raw Materials',
+  'Other',
+]
+
 /* ── Shared error box ───────────────────────── */
 function ErrorBox({ message }: { message: string }) {
   return (
@@ -47,7 +68,7 @@ function SignInForm({ goTo }: { goTo: (s: Screen) => void }) {
         }
         return
       }
-      goTo('profile')
+      goTo('home')
     } catch {
       setError('Network error. Please check your connection and try again.')
     } finally {
@@ -96,28 +117,56 @@ function SignInForm({ goTo }: { goTo: (s: Screen) => void }) {
 
 /* ── Sign-up form ───────────────────────────── */
 function SignUpForm() {
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', role: 'buyer' })
+  const [form, setForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    role: 'buyer',
+    businessName: '',
+    industry: 'Manufacturing',
+    industryOther: '',
+  })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const upd = (k: keyof typeof form) =>
-    (e: React.ChangeEvent<HTMLInputElement>) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(prev => ({ ...prev, [k]: e.target.value }))
+
+  const isSeller = form.role === 'seller'
+  const resolvedIndustry = form.industry === 'Other' ? form.industryOther : form.industry
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    if (isSeller && !form.businessName.trim()) {
+      setError('Please enter your business name.')
+      return
+    }
+    if (isSeller && form.industry === 'Other' && !form.industryOther.trim()) {
+      setError('Please specify your industry.')
+      return
+    }
     setLoading(true)
     try {
       const supabase = createClient()
       const { error: authError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
-        options: { data: { full_name: form.fullName, role: form.role } },
+        options: {
+          data: {
+            full_name: form.fullName,
+            role: form.role,
+            ...(isSeller && {
+              business_name: form.businessName.trim(),
+              industry: resolvedIndustry,
+            }),
+          },
+        },
       })
       if (authError) {
-        if (authError.message.toLowerCase().includes('already') ) {
+        if (authError.message.toLowerCase().includes('already')) {
           setError('An account with this email already exists. Try signing in.')
         } else if (authError.message.toLowerCase().includes('password')) {
           setError('Password must be at least 6 characters.')
@@ -158,64 +207,35 @@ function SignUpForm() {
     <form onSubmit={handleSubmit}>
       <div className="mb-4">
         <label className="field-label">Full name</label>
-        <input
-          className="field"
-          type="text"
-          placeholder="Jane Doe"
-          value={form.fullName}
-          onChange={upd('fullName')}
-          required
-          autoComplete="name"
-        />
+        <input className="field" type="text" placeholder="Jane Doe" value={form.fullName}
+          onChange={upd('fullName')} required autoComplete="name" />
       </div>
       <div className="mb-4">
         <label className="field-label">Email</label>
-        <input
-          className="field"
-          type="email"
-          placeholder="you@company.com"
-          value={form.email}
-          onChange={upd('email')}
-          required
-          autoComplete="email"
-        />
+        <input className="field" type="email" placeholder="you@company.com" value={form.email}
+          onChange={upd('email')} required autoComplete="email" />
       </div>
       <div className="mb-4">
         <label className="field-label">Password</label>
-        <input
-          className="field"
-          type="password"
-          placeholder="Min. 6 characters"
-          value={form.password}
-          onChange={upd('password')}
-          required
-          minLength={6}
-          autoComplete="new-password"
-        />
+        <input className="field" type="password" placeholder="Min. 6 characters" value={form.password}
+          onChange={upd('password')} required minLength={6} autoComplete="new-password" />
       </div>
-      <div className="mb-5">
+
+      {/* Role picker */}
+      <div className="mb-4">
         <label className="field-label">I am a</label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {(['buyer', 'seller'] as const).map(r => (
-            <label
-              key={r}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '11px 13px',
-                border: `1px solid ${form.role === r ? 'var(--primary)' : 'var(--border)'}`,
-                borderRadius: 'var(--r-sm)',
-                background: form.role === r ? 'var(--primary-soft)' : 'white',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
-              <input
-                type="radio"
-                name="signup-role"
-                value={r}
-                checked={form.role === r}
+            <label key={r} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px',
+              border: `1px solid ${form.role === r ? 'var(--primary)' : 'var(--border)'}`,
+              borderRadius: 'var(--r-sm)',
+              background: form.role === r ? 'var(--primary-soft)' : 'white',
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}>
+              <input type="radio" name="signup-role" value={r} checked={form.role === r}
                 onChange={() => setForm(prev => ({ ...prev, role: r }))}
-                style={{ accentColor: 'var(--primary)' }}
-              />
+                style={{ accentColor: 'var(--primary)' }} />
               <div>
                 <div className="font-display font-semibold" style={{ fontSize: 13, textTransform: 'capitalize' }}>{r}</div>
                 <div className="text-muted" style={{ fontSize: 11 }}>
@@ -226,6 +246,38 @@ function SignUpForm() {
           ))}
         </div>
       </div>
+
+      {/* Seller-only fields */}
+      {isSeller && (
+        <div style={{
+          background: 'var(--bg-alt)', borderRadius: 'var(--r-sm)',
+          padding: '14px 14px 2px', marginBottom: 16,
+          border: '1px solid var(--border)',
+        }}>
+          <div className="text-xs font-semibold" style={{ color: 'var(--primary)', marginBottom: 12, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+            Business details
+          </div>
+          <div className="mb-3">
+            <label className="field-label">Business name</label>
+            <input className="field" type="text" placeholder="Acme Industries Ltd."
+              value={form.businessName} onChange={upd('businessName')} required={isSeller} />
+          </div>
+          <div className="mb-3">
+            <label className="field-label">Industry</label>
+            <select className="field" value={form.industry} onChange={upd('industry')}>
+              {INDUSTRIES.map(i => <option key={i}>{i}</option>)}
+            </select>
+          </div>
+          {form.industry === 'Other' && (
+            <div className="mb-3">
+              <label className="field-label">Specify industry</label>
+              <input className="field" type="text" placeholder="e.g. Marine Engineering"
+                value={form.industryOther} onChange={upd('industryOther')} required />
+            </div>
+          )}
+        </div>
+      )}
+
       {error && <ErrorBox message={error} />}
       <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
         {loading ? 'Creating account…' : 'Create account'}
@@ -264,19 +316,15 @@ export function AuthScreen({ goTo }: { goTo: (s: Screen) => void }) {
         borderRadius: 'var(--r-sm)', padding: 4, marginBottom: 24,
       }}>
         {(['signin', 'signup'] as const).map(t => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              flex: 1, padding: '9px 0', borderRadius: 'var(--r-xs)',
-              fontFamily: 'var(--font-inter-tight, Inter, sans-serif)',
-              fontWeight: 600, fontSize: 14,
-              background: tab === t ? 'white' : 'transparent',
-              color: tab === t ? 'var(--ink)' : 'var(--muted)',
-              boxShadow: tab === t ? 'var(--shadow-sm)' : 'none',
-              transition: 'all 0.15s',
-            }}
-          >
+          <button key={t} onClick={() => setTab(t)} style={{
+            flex: 1, padding: '9px 0', borderRadius: 'var(--r-xs)',
+            fontFamily: 'var(--font-inter-tight, Inter, sans-serif)',
+            fontWeight: 600, fontSize: 14,
+            background: tab === t ? 'white' : 'transparent',
+            color: tab === t ? 'var(--ink)' : 'var(--muted)',
+            boxShadow: tab === t ? 'var(--shadow-sm)' : 'none',
+            transition: 'all 0.15s',
+          }}>
             {t === 'signin' ? 'Sign in' : 'Create account'}
           </button>
         ))}
@@ -284,10 +332,7 @@ export function AuthScreen({ goTo }: { goTo: (s: Screen) => void }) {
 
       {/* Form */}
       <div className="card" style={{ padding: 24 }}>
-        {tab === 'signin'
-          ? <SignInForm goTo={goTo} />
-          : <SignUpForm />
-        }
+        {tab === 'signin' ? <SignInForm goTo={goTo} /> : <SignUpForm />}
       </div>
 
       {/* Footer nudge */}

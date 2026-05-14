@@ -35,7 +35,10 @@ export function RFQsScreen({ goTo, isSignedIn = false }: { goTo: (s: Screen) => 
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, paddingBottom: 64 }} className="rfq-grid">
         {tab === 'browse'
-          ? BROWSE_RFQS.map(r => <RFQCard key={r.id} rfq={r} type="browse" onAction={() => goTo('success')} />)
+          ? BROWSE_RFQS.map(r => (
+              <RFQCard key={r.id} rfq={r} type="browse"
+                onAction={() => isSignedIn ? goTo('success') : goTo('auth')} />
+            ))
           : MY_RFQS.map(r => <RFQCard key={r.id} rfq={r} type="my" />)
         }
       </div>
