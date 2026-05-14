@@ -191,6 +191,10 @@ export interface UserProfile {
   businessPhone:    string
   description:      string   // public brand description (sellers)
 
+  // ── Brand metadata (sellers only) ────────────────────────
+  brandId?:   string
+  brandSlug?: string
+
   // ── UI preference ─────────────────────────────────────────
   bannerColor: string
   role?: 'buyer' | 'seller'

@@ -416,6 +416,7 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
     }
     load()
     return () => { mounted = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.id])
 
   if (!business) return null

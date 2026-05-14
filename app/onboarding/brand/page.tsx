@@ -4,8 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/supabase/queries'
-
-const CATEGORIES = ['Manufacturing', 'Technology', 'Construction', 'Logistics', 'Food & Bev', 'Services']
+import { INDUSTRIES } from '@/lib/data'
 
 export default function BrandOnboardingPage() {
   const router = useRouter()
@@ -63,7 +62,7 @@ export default function BrandOnboardingPage() {
         return
       }
 
-      router.push('/dashboard')
+      router.push('/')
       router.refresh()
     } catch {
       setError('Network error. Please check your connection and try again.')
@@ -94,7 +93,7 @@ export default function BrandOnboardingPage() {
               <div>
                 <label className="field-label">Industry</label>
                 <select className="field" value={form.category} onChange={upd('category')}>
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                  {INDUSTRIES.filter(i => i !== 'Other').map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div>
@@ -122,7 +121,7 @@ export default function BrandOnboardingPage() {
             )}
 
             <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={loading}>
-              {loading ? 'Creating brand…' : 'Create brand & go to dashboard'}
+              {loading ? 'Creating brand…' : 'Create brand'}
             </button>
           </form>
         </div>

@@ -125,6 +125,8 @@ export default function App() {
         businessWebsite:  brand?.website  || profile.business_website  || '',
         businessPhone:    brand?.phone    || profile.business_phone    || '',
         description:      brand?.description || '',
+        brandId:          brand?.id,
+        brandSlug:        brand?.slug,
         bannerColor:      DEFAULT_PROFILE.bannerColor,
         role:             profile.role,
       })
@@ -323,6 +325,8 @@ export default function App() {
             userProfile={userProfile}
             onSignOut={signOut}
             onDeleteAccount={deleteAccount}
+            userId={user?.id}
+            savedCount={favorites.length}
           />
         )
       case 'manage-profile':

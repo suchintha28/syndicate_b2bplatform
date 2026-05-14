@@ -1,9 +1,32 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Icon } from '@/components/icons'
-import { Button, Badge, Avatar, Field, TextArea, PageHeader, BackLink } from '@/components/ui'
-import { PRODUCTS, INDUSTRIES, MY_RFQS, PLANS, type UserProfile, type Product, type Screen } from '@/lib/data'
+import { Button, Badge, Avatar, Field, TextArea, PageHeader, BackLink, SkeletonCard } from '@/components/ui'
+import { PRODUCTS, INDUSTRIES, PLANS, type UserProfile, type Product, type Screen } from '@/lib/data'
+import { createClient } from '@/lib/supabase/client'
+
+/* ── Status helpers ─────────────────────────── */
+const RFQ_STATUS: Record<string, { label: string; color: string; bg: string }> = {
+  pending:   { label: 'Pending',   color: 'var(--warning)',       bg: 'var(--warning-soft, #fef9c3)' },
+  read:      { label: 'Viewed',    color: 'var(--muted)',         bg: 'var(--bg-alt)' },
+  responded: { label: 'Responded', color: 'var(--success)',       bg: 'var(--success-soft)' },
+  closed:    { label: 'Closed',    color: 'var(--ink)',           bg: 'var(--bg-alt)' },
+}
+
+function StatusPill({ status }: { status: string }) {
+  const s = RFQ_STATUS[status] || { label: status, color: 'var(--muted)', bg: 'var(--bg-alt)' }
+  return (
+    <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 99,
+      background: s.bg, color: s.color, letterSpacing: '0.02em', whiteSpace: 'nowrap' }}>
+      {s.label}
+    </span>
+  )
+}
+
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
 
 /* ── ProLock ────────────────────────────────── */
 function ProLock({ onUpgrade, label }: { onUpgrade: () => void; label: string }) {
@@ -114,14 +137,50 @@ function DeleteAccountModal({
 }
 
 /* ── ProfileScreen ──────────────────────────── */
-export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDeleteAccount }: {
+export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDeleteAccount, userId, savedCount = 0 }: {
   goTo: (s: Screen) => void
   isProMember: boolean
   userProfile: UserProfile
   onSignOut?: () => void
   onDeleteAccount?: (password: string) => Promise<string | null>
+  userId?: string
+  savedCount?: number
 }) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [dashLoading, setDashLoading]         = useState(true)
+  const [products,    setProducts]            = useState<{ id: string; name: string; category: string; is_active: boolean; price_range_min: number | null; images: string[]; slug: string }[]>([])
+  const [rfqs,        setRfqs]               = useState<{ id: string; subject: string; message: string; quantity: number | null; unit: string | null; status: string; created_at: string; profiles?: { full_name: string; email: string } | null; brands?: { name: string; slug: string } | null }[]>([])
+
+  const isSeller = userProfile.role === 'seller'
+  const hasBrand = !!userProfile.brandId
+
+  // Live dashboard data
+  useEffect(() => {
+    if (!userId) { setDashLoading(false); return }
+    const supabase = createClient()
+
+    async function load() {
+      if (isSeller && userProfile.brandId) {
+        const [pRes, rRes] = await Promise.all([
+          supabase.from('products')
+            .select('id, name, category, is_active, price_range_min, images, slug')
+            .eq('brand_id', userProfile.brandId!).order('created_at', { ascending: false }).limit(5),
+          supabase.from('rfqs')
+            .select('id, subject, message, quantity, unit, status, created_at, profiles(full_name, email)')
+            .eq('brand_id', userProfile.brandId!).order('created_at', { ascending: false }).limit(5),
+        ])
+        setProducts((pRes.data || []) as typeof products)
+        setRfqs((rRes.data || []) as unknown as typeof rfqs)
+      } else if (!isSeller) {
+        const { data } = await supabase.from('rfqs')
+          .select('id, subject, message, quantity, unit, status, created_at, brands(name, slug)')
+          .eq('buyer_id', userId!).order('created_at', { ascending: false }).limit(5)
+        setRfqs((data || []) as unknown as typeof rfqs)
+      }
+      setDashLoading(false)
+    }
+    load()
+  }, [userId, isSeller, userProfile.brandId])
 
   async function handleDeleteConfirm(password: string): Promise<string | null> {
     if (!onDeleteAccount) return 'Delete not available.'
@@ -130,196 +189,264 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
     return err
   }
 
+  // Derived stats
+  const totalProducts  = products.length
+  const activeProducts = products.filter(p => p.is_active).length
+  const totalRfqs      = rfqs.length
+  const pendingRfqs    = rfqs.filter(r => r.status === 'pending').length
+  const respondedRfqs  = rfqs.filter(r => r.status === 'responded').length
+
   return (
     <>
     {showDeleteModal && (
-      <DeleteAccountModal
-        onConfirm={handleDeleteConfirm}
-        onCancel={() => setShowDeleteModal(false)}
-      />
+      <DeleteAccountModal onConfirm={handleDeleteConfirm} onCancel={() => setShowDeleteModal(false)} />
     )}
-    <div className="container fade-up" style={{ paddingBottom: 64 }}>
-      <PageHeader eyebrow="Account" title={userProfile.role === 'seller' ? 'Your business' : 'Your account'} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 24 }} className="profile-grid">
-        <div>
-          {/* Identity card */}
-          <div className="card" style={{ padding: 28, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: 240, height: 240, background: 'radial-gradient(circle, var(--primary-soft) 0%, transparent 70%)', opacity: 0.7 }} />
-            <div style={{ position: 'relative' }}>
-              <div className="flex items-start gap-4 mb-6 flex-wrap">
-                <Avatar initials={userProfile.logo} size="xl" />
-                <div className="flex-1" style={{ minWidth: 220 }}>
-                  <h2 className="font-display font-bold text-2xl mb-1">
-                    {userProfile.fullName || 'My Account'}
-                  </h2>
-                  {(userProfile.businessName || userProfile.businessIndustry) && (
-                    <div className="text-muted mb-1" style={{ fontSize: 14 }}>
-                      {[userProfile.businessName, userProfile.businessIndustry].filter(Boolean).join(' · ')}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Badge variant={isProMember ? 'pro' : 'neutral'} icon={isProMember ? 'sparkle' : undefined}>
-                      {isProMember ? 'Pro Member' : 'Free Plan'}
-                    </Badge>
-                    {userProfile.role === 'seller' && (
-                      <Badge variant="verified" icon="check">Seller</Badge>
-                    )}
-                    {userProfile.role === 'buyer' && (
-                      <Badge variant="neutral">Buyer</Badge>
-                    )}
-                  </div>
+    <div className="container fade-up" style={{ maxWidth: 780, paddingBottom: 80 }}>
+
+      {/* ── Identity header ─────────────────── */}
+      <div className="card" style={{ padding: 28, marginBottom: 20, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, right: 0, width: 200, height: 200, background: 'radial-gradient(circle, var(--primary-soft) 0%, transparent 70%)', opacity: 0.6, pointerEvents: 'none' }} />
+        <div style={{ position: 'relative' }}>
+          <div className="flex items-start gap-4 flex-wrap" style={{ marginBottom: 20 }}>
+            <Avatar initials={userProfile.logo} size="xl" />
+            <div className="flex-1" style={{ minWidth: 200 }}>
+              <h2 className="font-display font-bold" style={{ fontSize: 22, margin: '0 0 2px' }}>
+                {userProfile.fullName || 'My Account'}
+              </h2>
+              {(userProfile.businessName || userProfile.businessIndustry) && (
+                <div className="text-muted" style={{ fontSize: 13, marginBottom: 8 }}>
+                  {[userProfile.businessName, userProfile.businessIndustry].filter(Boolean).join(' · ')}
                 </div>
+              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={isProMember ? 'pro' : 'neutral'} icon={isProMember ? 'sparkle' : undefined}>
+                  {isProMember ? 'Pro Member' : 'Free Plan'}
+                </Badge>
+                {isSeller && <Badge variant="verified" icon="check">Seller</Badge>}
+                {!isSeller && <Badge variant="neutral">Buyer</Badge>}
               </div>
-
-              {/* Seller: prompt to set up brand if none exists */}
-              {userProfile.role === 'seller' && !userProfile.businessName && (
-                <div style={{ background: 'var(--primary-soft)', border: '1px solid var(--primary)', borderRadius: 'var(--r-md)', padding: 20, marginBottom: 20 }}>
-                  <div className="font-display font-semibold mb-1">Set up your brand profile</div>
-                  <div className="text-sm text-muted mb-3">Create your brand listing so buyers can find you on the marketplace.</div>
-                  <Button variant="primary" size="sm" icon="arrow-right" onClick={() => { window.location.href = '/onboarding/brand' }}>
-                    Create brand profile
-                  </Button>
-                </div>
-              )}
-
-              {userProfile.role === 'seller' && userProfile.businessName && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 16, padding: '20px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
-                  {[
-                    { l: 'Products',      v: PRODUCTS.length },
-                    { l: 'Open RFQs',     v: MY_RFQS.filter(r => r.status === 'Open').length },
-                    { l: 'Profile views', v: '—' },
-                    { l: 'Conversion',    v: '—' },
-                  ].map((s, i) => (
-                    <div key={i}>
-                      <div className="uppercase-label mb-1">{s.l}</div>
-                      <div className="font-display font-bold text-xl">{s.v}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {userProfile.role === 'buyer' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 16, padding: '20px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 24 }}>
-                  {[
-                    { l: 'RFQs sent',   v: MY_RFQS.length },
-                    { l: 'Responses',   v: '—' },
-                    { l: 'Saved brands', v: '—' },
-                  ].map((s, i) => (
-                    <div key={i}>
-                      <div className="uppercase-label mb-1">{s.l}</div>
-                      <div className="font-display font-bold text-xl">{s.v}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!isProMember && userProfile.role === 'seller' && (
-                <div style={{ background: 'var(--ink)', borderRadius: 'var(--r-md)', padding: 20, color: 'white' }}>
-                  <div className="flex items-center gap-3 mb-3 flex-wrap">
-                    <div style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', background: 'var(--primary)', display: 'grid', placeItems: 'center' }}>
-                      <Icon name="sparkle" size={18} stroke="white" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-display font-bold">Unlock Pro</div>
-                      <div className="text-xs" style={{ color: 'rgba(255,255,255,0.65)' }}>Unlimited products, RFQ access, direct sales, and more.</div>
-                    </div>
-                  </div>
-                  <Button variant="primary" block onClick={() => goTo('subscription')}>Upgrade to Pro</Button>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Manage list */}
-          <div style={{ marginTop: 24 }}>
-            <div className="uppercase-label mb-3">Manage</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[
-                { label: 'Edit profile', sub: userProfile.role === 'seller' ? 'Business info, contact details, custom pages' : 'Your name, email, contact details', screen: 'manage-profile' as Screen, icon: 'briefcase', show: true },
-                { label: 'Products',     sub: `${PRODUCTS.length} products · ${PRODUCTS.filter(p => p.status === 'Active').length} active`, screen: 'manage-products' as Screen, icon: 'box', show: userProfile.role === 'seller' },
-                { label: 'Settings',     sub: 'Notifications, privacy, app preferences', screen: 'settings' as Screen, icon: 'sliders', show: true },
-              ].filter(item => item.show).map(item => (
-                <button key={item.screen} className="card card-hover"
-                  onClick={() => goTo(item.screen)}
-                  style={{ padding: 18, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
-                  <div style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', background: 'var(--bg-alt)', display: 'grid', placeItems: 'center' }}>
-                    <Icon name={item.icon} size={18} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-display font-semibold">{item.label}</div>
-                    <div className="text-xs text-muted">{item.sub}</div>
-                  </div>
-                  <Icon name="chevron-right" size={16} stroke="var(--muted)" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sign out */}
-          {onSignOut && (
-            <div style={{ marginTop: 16 }}>
-              <button
-                onClick={onSignOut}
-                className="card card-hover"
-                style={{ width: '100%', padding: 18, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
-              >
-                <div style={{ width: 40, height: 40, borderRadius: 'var(--r-sm)', background: 'var(--danger-soft)', display: 'grid', placeItems: 'center' }}>
-                  <Icon name="log-out" size={18} stroke="var(--danger)" />
-                </div>
-                <span className="font-display font-semibold" style={{ color: 'var(--danger)' }}>Sign out</span>
-              </button>
-            </div>
-          )}
-
-          {/* Danger zone */}
-          {onDeleteAccount && (
-            <div style={{ marginTop: 32 }}>
-              <div className="uppercase-label mb-3" style={{ color: 'var(--danger)' }}>Danger zone</div>
-              <div className="card" style={{ padding: 20, border: '1px solid rgba(185,28,28,0.25)', background: 'var(--danger-soft)' }}>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="flex-1" style={{ minWidth: 200 }}>
-                    <div className="font-display font-semibold" style={{ marginBottom: 4 }}>Delete account</div>
-                    <div className="text-xs text-muted">Permanently removes your account, brand, products, and all associated data. This action cannot be reversed.</div>
-                  </div>
-                  <button
-                    onClick={() => setShowDeleteModal(true)}
-                    style={{
-                      padding: '8px 16px', borderRadius: 'var(--r-sm)',
-                      border: '1px solid rgba(185,28,28,0.4)', background: 'white',
-                      color: 'var(--danger)', fontWeight: 600, fontSize: 13,
-                      cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
-                    }}
-                  >
-                    Delete account
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Activity */}
-        <div>
-          <div className="uppercase-label mb-3">Recent activity</div>
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            {[
-              { icon: 'message',  label: 'New message from TechMakers Inc.',            time: '2h ago' },
-              { icon: 'file',     label: 'RFQ "Packaging Materials" got 2 new responses', time: '1d ago' },
-              { icon: 'trending', label: 'Smart Sensor Pro reached 50 views',           time: '2d ago' },
-              { icon: 'heart',    label: 'Your profile was saved by 3 buyers',          time: '3d ago' },
-            ].map((a, i, arr) => (
-              <div key={i} className="flex items-center gap-3" style={{ padding: 16, borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                <div style={{ width: 32, height: 32, borderRadius: 'var(--r-xs)', background: 'var(--primary-soft)', display: 'grid', placeItems: 'center' }}>
-                  <Icon name={a.icon} size={14} stroke="var(--primary)" />
-                </div>
-                <div className="flex-1 text-sm">{a.label}</div>
-                <span className="font-mono text-xs text-muted">{a.time}</span>
-              </div>
-            ))}
+          {/* Quick actions */}
+          <div className="flex gap-2 flex-wrap">
+            {isSeller && hasBrand && <>
+              <Button variant="primary"   size="sm" icon="plus"    onClick={() => goTo('add-product')}>Add product</Button>
+              <Button variant="secondary" size="sm" icon="compass" onClick={() => window.open(`/brands/${userProfile.brandSlug}`, '_blank')}>View brand page</Button>
+              <Button variant="secondary" size="sm" icon="edit"    onClick={() => goTo('manage-profile')}>Edit profile</Button>
+            </>}
+            {isSeller && !hasBrand && (
+              <Button variant="primary" size="sm" icon="arrow-right" onClick={() => { window.location.href = '/onboarding/brand' }}>
+                Set up brand profile
+              </Button>
+            )}
+            {!isSeller && <>
+              <Button variant="primary"   size="sm" icon="compass" onClick={() => goTo('listing')}>Browse suppliers</Button>
+              <Button variant="secondary" size="sm" icon="file"    onClick={() => goTo('rfq-create')}>Post an RFQ</Button>
+              <Button variant="secondary" size="sm" icon="heart"   onClick={() => goTo('saved')}>Saved ({savedCount})</Button>
+            </>}
           </div>
         </div>
       </div>
+
+      {/* ── Stats row ──────────────────────── */}
+      {dashLoading ? (
+        <SkeletonCard height={80} />
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: isSeller && hasBrand ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+          {isSeller && hasBrand && [
+            { l: 'Products',       v: totalProducts },
+            { l: 'Active',         v: activeProducts },
+            { l: 'Incoming RFQs',  v: totalRfqs },
+            { l: 'Pending',        v: pendingRfqs },
+          ].map((s, i) => (
+            <div key={i} className="card" style={{ padding: '14px 18px' }}>
+              <div className="uppercase-label mb-1" style={{ fontSize: 10 }}>{s.l}</div>
+              <div className="font-display font-bold" style={{ fontSize: 22 }}>{s.v}</div>
+            </div>
+          ))}
+          {!isSeller && [
+            { l: 'RFQs sent',   v: totalRfqs },
+            { l: 'Responded',   v: respondedRfqs },
+            { l: 'Saved',       v: savedCount },
+          ].map((s, i) => (
+            <div key={i} className="card" style={{ padding: '14px 18px' }}>
+              <div className="uppercase-label mb-1" style={{ fontSize: 10 }}>{s.l}</div>
+              <div className="font-display font-bold" style={{ fontSize: 22 }}>{s.v}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Seller: no brand prompt ─────────── */}
+      {isSeller && !hasBrand && (
+        <div className="card" style={{ padding: 24, marginBottom: 20, background: 'var(--ink)', color: 'white', borderColor: 'var(--ink)' }}>
+          <div className="font-display font-bold" style={{ fontSize: 16, marginBottom: 6 }}>Complete your seller profile</div>
+          <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 14, marginBottom: 16 }}>
+            Create your brand page to start appearing in marketplace search results and receive buyer inquiries.
+          </div>
+          <Button variant="primary" size="sm" onClick={() => { window.location.href = '/onboarding/brand' }}>
+            Create brand profile →
+          </Button>
+        </div>
+      )}
+
+      {/* ── Seller: products ───────────────── */}
+      {isSeller && hasBrand && (
+        <div style={{ marginBottom: 20 }}>
+          <div className="flex items-center justify-between mb-3">
+            <div className="uppercase-label">Products</div>
+            <Button variant="primary" size="sm" icon="plus" onClick={() => goTo('add-product')}>Add product</Button>
+          </div>
+          {dashLoading ? <SkeletonCard height={120} /> : products.length === 0 ? (
+            <div className="card" style={{ padding: 28, textAlign: 'center' }}>
+              <div className="text-muted text-sm mb-3">No products yet. Add your first product to start receiving inquiries.</div>
+              <Button variant="secondary" size="sm" icon="plus" onClick={() => goTo('add-product')}>Add first product</Button>
+            </div>
+          ) : (
+            <div className="card" style={{ overflow: 'hidden' }}>
+              {products.map((p, i) => (
+                <div key={p.id} style={{ padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-alt)' }}>
+                    {p.images[0] && <img src={p.images[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                  </div>
+                  <div className="flex-1" style={{ minWidth: 0 }}>
+                    <div className="font-semibold truncate" style={{ fontSize: 14 }}>{p.name}</div>
+                    <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 2 }}>
+                      {p.price_range_min && <span className="font-mono" style={{ fontSize: 12, color: 'var(--muted)' }}>LKR {Math.round(p.price_range_min).toLocaleString()}</span>}
+                      <span style={{ fontSize: 11, color: p.is_active ? 'var(--success)' : 'var(--muted)', fontWeight: 600 }}>{p.is_active ? '● Active' : '○ Inactive'}</span>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => window.open(`/products/${p.slug}`, '_blank')}>View</Button>
+                </div>
+              ))}
+              {totalProducts > 5 && (
+                <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+                  <button onClick={() => goTo('manage-products')} className="text-sm" style={{ color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+                    View all {totalProducts} products →
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── RFQs section ───────────────────── */}
+      <div style={{ marginBottom: 20 }}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="uppercase-label">{isSeller ? 'Incoming inquiries' : 'My RFQs'}</div>
+          <button onClick={() => goTo('rfqs')} className="text-sm" style={{ color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}>
+            View all →
+          </button>
+        </div>
+        {dashLoading ? <SkeletonCard height={140} /> : rfqs.length === 0 ? (
+          <div className="card" style={{ padding: 28, textAlign: 'center' }}>
+            <div className="text-muted text-sm mb-3">
+              {isSeller ? 'No inquiries yet. They will appear here when buyers contact you.' : 'No RFQs yet. Post one to start receiving bids from suppliers.'}
+            </div>
+            {!isSeller && <Button variant="secondary" size="sm" icon="file" onClick={() => goTo('rfq-create')}>Post an RFQ</Button>}
+          </div>
+        ) : (
+          <div className="card" style={{ overflow: 'hidden' }}>
+            {rfqs.map((r, i) => (
+              <div key={r.id} style={{ padding: '14px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="font-semibold truncate" style={{ fontSize: 14 }}>{r.subject}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
+                      {isSeller
+                        ? `From ${r.profiles?.full_name || r.profiles?.email || 'a buyer'}`
+                        : r.brands?.name ? `To ${r.brands.name}` : ''
+                      }
+                      {' · '}{fmtDate(r.created_at)}
+                    </div>
+                  </div>
+                  <StatusPill status={r.status} />
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {r.message}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── Pro upsell (sellers only) ───────── */}
+      {!isProMember && isSeller && hasBrand && (
+        <div style={{ background: 'var(--ink)', borderRadius: 'var(--r-md)', padding: 20, color: 'white', marginBottom: 20 }}>
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <div style={{ width: 36, height: 36, borderRadius: 'var(--r-sm)', background: 'var(--primary)', display: 'grid', placeItems: 'center' }}>
+              <Icon name="sparkle" size={18} stroke="white" />
+            </div>
+            <div className="flex-1">
+              <div className="font-display font-bold">Unlock Pro</div>
+              <div className="text-xs" style={{ color: 'rgba(255,255,255,0.65)' }}>Unlimited products, RFQ marketplace access, analytics and more.</div>
+            </div>
+          </div>
+          <Button variant="primary" block onClick={() => goTo('subscription')}>Upgrade to Pro</Button>
+        </div>
+      )}
+
+      {/* ── Manage ─────────────────────────── */}
+      <div style={{ marginBottom: 16 }}>
+        <div className="uppercase-label mb-3">Manage</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { label: 'Edit profile',     sub: isSeller ? 'Personal info, business details' : 'Your name, email, contact details', screen: 'manage-profile' as Screen, icon: 'briefcase', show: true },
+            { label: 'Products',         sub: `Manage your product listings`, screen: 'manage-products' as Screen, icon: 'box', show: isSeller },
+            { label: 'Subscription',     sub: isProMember ? 'Pro plan · manage billing' : 'Upgrade to Pro', screen: 'subscription' as Screen, icon: 'sparkle', show: true },
+            { label: 'Settings',         sub: 'Notifications, privacy, preferences', screen: 'settings' as Screen, icon: 'sliders', show: true },
+          ].filter(item => item.show).map(item => (
+            <button key={item.screen} className="card card-hover"
+              onClick={() => goTo(item.screen)}
+              style={{ padding: 16, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
+              <div style={{ width: 38, height: 38, borderRadius: 'var(--r-sm)', background: 'var(--bg-alt)', display: 'grid', placeItems: 'center' }}>
+                <Icon name={item.icon} size={17} />
+              </div>
+              <div className="flex-1">
+                <div className="font-display font-semibold" style={{ fontSize: 14 }}>{item.label}</div>
+                <div className="text-xs text-muted">{item.sub}</div>
+              </div>
+              <Icon name="chevron-right" size={15} stroke="var(--muted)" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Sign out ────────────────────────── */}
+      {onSignOut && (
+        <div style={{ marginBottom: 16 }}>
+          <button onClick={onSignOut} className="card card-hover"
+            style={{ width: '100%', padding: 16, textAlign: 'left', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
+            <div style={{ width: 38, height: 38, borderRadius: 'var(--r-sm)', background: 'var(--danger-soft)', display: 'grid', placeItems: 'center' }}>
+              <Icon name="log-out" size={17} stroke="var(--danger)" />
+            </div>
+            <span className="font-display font-semibold" style={{ color: 'var(--danger)', fontSize: 14 }}>Sign out</span>
+          </button>
+        </div>
+      )}
+
+      {/* ── Danger zone ─────────────────────── */}
+      {onDeleteAccount && (
+        <div style={{ marginTop: 32 }}>
+          <div className="uppercase-label mb-3" style={{ color: 'var(--danger)' }}>Danger zone</div>
+          <div className="card" style={{ padding: 20, border: '1px solid rgba(185,28,28,0.25)', background: 'var(--danger-soft)' }}>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex-1" style={{ minWidth: 200 }}>
+                <div className="font-display font-semibold" style={{ marginBottom: 4 }}>Delete account</div>
+                <div className="text-xs text-muted">Permanently removes your account, brand, products, and all data. Cannot be undone.</div>
+              </div>
+              <button onClick={() => setShowDeleteModal(true)}
+                style={{ padding: '8px 16px', borderRadius: 'var(--r-sm)', border: '1px solid rgba(185,28,28,0.4)', background: 'white', color: 'var(--danger)', fontWeight: 600, fontSize: 13, cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' }}>
+                Delete account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   )
