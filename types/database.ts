@@ -64,17 +64,44 @@ export interface DbBusinessMember {
 export interface DbRfq {
   id: string
   buyer_id: string
-  brand_id: string
+  brand_id: string | null       // null = public RFQ (open to all suppliers)
   product_id: string | null
   subject: string
   message: string
   quantity: number | null
   unit: string | null
+  category: string | null
+  budget_min: number | null
+  budget_max: number | null
+  location: string | null
+  timeline: string | null
+  expires_at: string | null
+  images: string[]
+  is_public: boolean
   status: 'pending' | 'read' | 'responded' | 'closed'
   created_at: string
   updated_at: string
   brands?: { name: string; slug: string; logo_url?: string | null } | null
   profiles?: { full_name: string; email: string; avatar_url?: string | null } | null
+}
+
+export interface DbRfqBid {
+  id: string
+  rfq_id: string
+  bidder_id: string
+  brand_id: string
+  description: string
+  amount: number | null
+  currency: string
+  timeline: string | null
+  notes: string | null
+  images: string[]
+  status: string                // 'pending' | 'accepted' | 'rejected'
+  created_at: string
+  // Joins
+  profiles?: { full_name: string; avatar_url: string | null } | null
+  brands?: { name: string; logo_url: string | null } | null
+  rfqs?: { subject: string; buyer_id: string; is_public: boolean; status: string } | null
 }
 
 export interface DbRfqResponse {
