@@ -917,6 +917,29 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
   // Variations — UI only, not persisted yet
   const [variations, setVariations] = useState<{ name: string; price: number }[]>([])
 
+  // Specs — UI only
+  const [productSpecs, setProductSpecs] = useState<{ l: string; v: string }[]>([
+    { l: 'Brand', v: '' }, { l: 'Model', v: '' }, { l: 'Warranty', v: '' },
+  ])
+  const [techSpecs, setTechSpecs] = useState<{ l: string; v: string }[]>([
+    { l: '', v: '' },
+  ])
+  const setSpec = (group: 'product' | 'tech', i: number, key: 'l' | 'v', val: string) => {
+    if (group === 'product') {
+      setProductSpecs(prev => { const a = [...prev]; a[i] = { ...a[i], [key]: val }; return a })
+    } else {
+      setTechSpecs(prev => { const a = [...prev]; a[i] = { ...a[i], [key]: val }; return a })
+    }
+  }
+  const addSpec = (group: 'product' | 'tech') => {
+    if (group === 'product') setProductSpecs(prev => [...prev, { l: '', v: '' }])
+    else setTechSpecs(prev => [...prev, { l: '', v: '' }])
+  }
+  const removeSpec = (group: 'product' | 'tech', i: number) => {
+    if (group === 'product') setProductSpecs(prev => prev.filter((_, idx) => idx !== i))
+    else setTechSpecs(prev => prev.filter((_, idx) => idx !== i))
+  }
+
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -1131,6 +1154,36 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
             ))}
             <Button variant="secondary" size="sm" icon="plus" type="button" onClick={addVariation} block>Add variation</Button>
           </div>
+        </div>
+
+        {/* ── Specifications (UI only) ─────────── */}
+        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-display font-bold text-lg">Specifications</h3>
+            <span className="text-xs text-muted">Product and technical specs shown on the detail page</span>
+          </div>
+
+          <div className="uppercase-label mb-2">Product specifications</div>
+          {productSpecs.map((s, i) => (
+            <div key={i} className="spec-row">
+              <input type="text" placeholder="Label (e.g. Brand)" value={s.l} onChange={e => setSpec('product', i, 'l', e.target.value)} />
+              <input type="text" placeholder="Value" value={s.v} onChange={e => setSpec('product', i, 'v', e.target.value)} />
+              <Button variant="ghost" size="sm" icon="x" type="button" onClick={() => removeSpec('product', i)} />
+            </div>
+          ))}
+          <Button variant="secondary" size="sm" icon="plus" type="button" onClick={() => addSpec('product')}>Add row</Button>
+
+          <div className="divider" style={{ margin: '20px 0' }} />
+
+          <div className="uppercase-label mb-2">Technical specifications</div>
+          {techSpecs.map((s, i) => (
+            <div key={i} className="spec-row">
+              <input type="text" placeholder="Label (e.g. Connectivity)" value={s.l} onChange={e => setSpec('tech', i, 'l', e.target.value)} />
+              <input type="text" placeholder="Value" value={s.v} onChange={e => setSpec('tech', i, 'v', e.target.value)} />
+              <Button variant="ghost" size="sm" icon="x" type="button" onClick={() => removeSpec('tech', i)} />
+            </div>
+          ))}
+          <Button variant="secondary" size="sm" icon="plus" type="button" onClick={() => addSpec('tech')}>Add row</Button>
         </div>
 
         {/* ── Direct sales (UI only) ───────────── */}

@@ -124,3 +124,54 @@ export function BottomNav({ screen, setScreen, unreadCount }: NavProps) {
     </nav>
   )
 }
+
+export function Footer({ goTo }: { goTo: (s: Screen) => void }) {
+  return (
+    <footer className="site-footer">
+      <div className="site-footer-inner">
+        <div className="footer-grid">
+          <div className="footer-col">
+            <div className="footer-brand-line">
+              <span className="footer-brand-mark">S</span>
+              <span className="footer-brand-name">Syndicate</span>
+            </div>
+            <p className="footer-tagline">
+              The B2B network for serious buyers. Verified suppliers, structured RFQs,
+              transparent reviews.
+            </p>
+          </div>
+          <div className="footer-col">
+            <h4>Marketplace</h4>
+            <ul>
+              <li><button onClick={() => goTo('listing')}>Explore suppliers</button></li>
+              <li><button onClick={() => goTo('rfqs')}>Browse RFQs</button></li>
+              <li><button onClick={() => goTo('rfq-create')}>Post an RFQ</button></li>
+              <li><button onClick={() => goTo('subscription')}>Pricing</button></li>
+            </ul>
+          </div>
+          <div className="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><button onClick={() => goTo('about')}>About us</button></li>
+              <li><button onClick={() => goTo('contact')}>Contact us</button></li>
+            </ul>
+          </div>
+          <div className="footer-col">
+            <h4>Legal</h4>
+            <ul>
+              <li><button onClick={() => goTo('privacy')}>Privacy policy</button></li>
+            </ul>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <div>© 2026 Syndicate Marketplace, Inc.</div>
+          <div className="footer-bottom-links">
+            <button onClick={() => goTo('about')}>About</button>
+            <button onClick={() => goTo('contact')}>Contact</button>
+            <button onClick={() => goTo('privacy')}>Privacy</button>
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
+}

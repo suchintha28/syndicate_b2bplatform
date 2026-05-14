@@ -55,6 +55,7 @@ export const RATING_FILTERS = ['All Ratings', '5 Stars', '4+ Stars', '3+ Stars']
 
 export interface ProductVariation { name: string; price: number }
 export interface PriceTier { min: number; max: number | null; price: number }
+export interface ProductSpec { label: string; value: string }
 
 export interface Product {
   id: string
@@ -71,6 +72,8 @@ export interface Product {
   videoUrl: string
   directSales: boolean
   description: string
+  productSpecs?: ProductSpec[]
+  techSpecs?: ProductSpec[]
 }
 
 export const PRODUCTS: Product[] = [
@@ -212,6 +215,7 @@ export type Screen =
   | 'settings' | 'subscription'
   | 'notifications'
   | 'auth'
+  | 'about' | 'privacy' | 'contact'
 
 export interface NavOpts {
   // Explore filters

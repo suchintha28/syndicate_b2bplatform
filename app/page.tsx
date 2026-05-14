@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { TopNav, BottomNav } from '@/components/nav'
+import { TopNav, BottomNav, Footer } from '@/components/nav'
 import { AuthScreen } from '@/components/screens/auth'
 import {
   HomeScreen,
@@ -12,6 +12,11 @@ import {
   ProductDetailScreen,
   SavedScreen,
 } from '@/components/screens/marketplace'
+import {
+  AboutScreen,
+  PrivacyScreen,
+  ContactScreen,
+} from '@/components/screens/info'
 import {
   RFQsScreen,
   RFQCreateScreen,
@@ -382,6 +387,7 @@ export default function App() {
             favorites={favorites}
             toggleFavorite={toggleFavorite}
             cardStyle={cardStyle}
+            isSignedIn={!!user}
           />
         )
       case 'product-detail':
@@ -391,6 +397,7 @@ export default function App() {
             product={selectedProduct}
             business={selectedBusiness}
             setSelectedBusiness={setSelectedBusiness}
+            isSignedIn={!!user}
           />
         )
       case 'saved':
@@ -501,6 +508,12 @@ export default function App() {
             setIsProMember={setIsProMember}
           />
         )
+      case 'about':
+        return <AboutScreen goTo={goTo} />
+      case 'privacy':
+        return <PrivacyScreen goTo={goTo} />
+      case 'contact':
+        return <ContactScreen goTo={goTo} />
       default:
         return (
           <HomeScreen
@@ -532,6 +545,7 @@ export default function App() {
       <main className="main-content">
         {renderScreen()}
       </main>
+      <Footer goTo={goTo} />
       <BottomNav
         screen={screen}
         setScreen={goTo}
