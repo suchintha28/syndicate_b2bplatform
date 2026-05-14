@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react'
 import { Icon } from '@/components/icons'
 import { Button, Badge, Avatar, Field, TextArea, PageHeader, BackLink, SkeletonCard } from '@/components/ui'
-import { PRODUCTS, INDUSTRIES, PLANS, type UserProfile, type Product, type Screen } from '@/lib/data'
+import { INDUSTRIES, PLANS, type UserProfile, type Screen } from '@/lib/data'
 import { createClient } from '@/lib/supabase/client'
+import { generateSlug } from '@/lib/supabase/queries'
+import type { DbProduct } from '@/types/database'
 
 /* ── Image upload helper ────────────────────── */
 async function uploadImage(
@@ -69,6 +71,67 @@ function ImageUploadCircle({
       )}
       <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp"
         style={{ display: 'none' }} onChange={handleFile} aria-label={label} />
+    </div>
+  )
+}
+
+/* ── ProductImageUploader ───────────────────── */
+function ProductImageUploader({ images, brandId, onUpdate }: {
+  images: string[]
+  brandId: string
+  onUpdate: (urls: string[]) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    const remaining = 3 - images.length
+    const toUpload = files.slice(0, remaining)
+    if (!toUpload.length || !brandId) return
+    setUploading(true)
+    const supabase = createClient()
+    const newUrls: string[] = []
+    for (const file of toUpload) {
+      if (file.size > 5 * 1024 * 1024) { alert(`${file.name} is over 5 MB — skipped.`); continue }
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) { alert('Only JPG, PNG, or WebP allowed.'); continue }
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const path = `${brandId}/${Date.now()}-${Math.random().toString(36).slice(2, 5)}.${ext}`
+      const { error } = await supabase.storage.from('products').upload(path, file, { upsert: true })
+      if (!error) {
+        const { data } = supabase.storage.from('products').getPublicUrl(path)
+        newUrls.push(data.publicUrl)
+      }
+    }
+    onUpdate([...images, ...newUrls].slice(0, 3))
+    setUploading(false)
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+        {images.map((url, i) => (
+          <div key={i} style={{ position: 'relative', width: 80, height: 80, flexShrink: 0 }}>
+            <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)' }} />
+            <button type="button" onClick={() => onUpdate(images.filter((_, j) => j !== i))}
+              style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: 'var(--danger)', color: 'white', border: '2px solid white', cursor: 'pointer', display: 'grid', placeItems: 'center', fontSize: 13, lineHeight: 1, fontFamily: 'inherit', padding: 0 }}>
+              ×
+            </button>
+          </div>
+        ))}
+        {images.length < 3 && (
+          <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading || !brandId}
+            style={{ width: 80, height: 80, border: '2px dashed var(--border-strong)', borderRadius: 'var(--r-sm)', display: 'grid', placeItems: 'center', cursor: brandId ? 'pointer' : 'not-allowed', background: 'var(--bg-alt)', flexShrink: 0 }}>
+            {uploading
+              ? <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid var(--primary)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+              : <Icon name="plus" size={20} stroke="var(--muted)" />
+            }
+          </button>
+        )}
+      </div>
+      <div className="text-xs text-muted">Up to 3 images · JPG, PNG, WebP · max 5 MB each</div>
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple style={{ display: 'none' }} onChange={handleFiles} />
     </div>
   )
 }
@@ -719,40 +782,92 @@ export function ManageProfileScreen({ goTo, userProfile, onSave, isProMember }: 
 /* ── ManageProductsScreen ───────────────────── */
 export function ManageProductsScreen({ goTo, setEditingProduct }: {
   goTo: (s: Screen) => void
-  setEditingProduct: (p: Product | null) => void
+  setEditingProduct: (p: DbProduct | null) => void
 }) {
+  const [products, setProducts]   = useState<DbProduct[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function load() {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+      const { data: brand } = await supabase.from('brands').select('id').eq('owner_id', user.id).maybeSingle()
+      if (!brand) { setLoading(false); return }
+      const { data } = await supabase.from('products').select('*').eq('brand_id', brand.id).order('created_at', { ascending: false })
+      setProducts((data || []) as DbProduct[])
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  async function toggleActive(id: string, current: boolean) {
+    setTogglingId(id)
+    const supabase = createClient()
+    const { error } = await supabase.from('products').update({ is_active: !current }).eq('id', id)
+    if (!error) setProducts(prev => prev.map(p => p.id === id ? { ...p, is_active: !current } : p))
+    setTogglingId(null)
+  }
+
+  const total  = products.length
+  const active = products.filter(p => p.is_active).length
+
   return (
     <div className="container fade-up" style={{ paddingBottom: 64 }}>
       <BackLink onClick={() => goTo('profile')}>Back to profile</BackLink>
       <PageHeader
         title="Products"
-        sub={`${PRODUCTS.length} total · ${PRODUCTS.filter(p => p.status === 'Active').length} active`}
+        sub={loading ? 'Loading…' : `${total} total · ${active} active`}
         action={<Button variant="primary" icon="plus" onClick={() => goTo('add-product')}>Add product</Button>}
       />
 
-      <div className="card" style={{ overflow: 'hidden' }}>
-        {PRODUCTS.map((p, i) => (
-          <div key={p.id} style={{ padding: 16, borderTop: i === 0 ? 'none' : '1px solid var(--border)', display: 'flex', gap: 14, alignItems: 'center' }}>
-            <div style={{ width: 56, height: 56, borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-alt)' }}>
-              <img src={p.image} alt="" className="img-cover"
-                onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/p${p.id}/120/120` }} />
-            </div>
-            <div className="flex-1" style={{ minWidth: 0 }}>
-              <div className="font-display font-semibold truncate">{p.name}</div>
-              <div className="text-xs text-muted flex items-center gap-2 flex-wrap">
-                <span className="font-mono">{p.price}</span>
-                <Badge variant={p.status === 'Active' ? 'success' : 'neutral'}>{p.status}</Badge>
-                <span>· {p.sales} sales</span>
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[1, 2, 3].map(i => <SkeletonCard key={i} height={76} />)}
+        </div>
+      ) : products.length === 0 ? (
+        <div className="card" style={{ padding: 48, textAlign: 'center' }}>
+          <Icon name="box" size={32} stroke="var(--muted)" />
+          <div className="font-display font-semibold mt-3 mb-1">No products yet</div>
+          <div className="text-sm text-muted mb-4">Add your first product to start receiving inquiries from buyers.</div>
+          <Button variant="primary" icon="plus" onClick={() => goTo('add-product')}>Add first product</Button>
+        </div>
+      ) : (
+        <div className="card" style={{ overflow: 'hidden' }}>
+          {products.map((p, i) => {
+            const priceLabel = p.price_range_min ? `LKR ${Math.round(p.price_range_min).toLocaleString()}` : null
+            return (
+              <div key={p.id} style={{ padding: 16, borderTop: i === 0 ? 'none' : '1px solid var(--border)', display: 'flex', gap: 14, alignItems: 'center' }}>
+                <div style={{ width: 56, height: 56, borderRadius: 'var(--r-sm)', overflow: 'hidden', flexShrink: 0, background: 'var(--bg-alt)', display: 'grid', placeItems: 'center' }}>
+                  {p.images[0]
+                    ? <img src={p.images[0]} alt="" className="img-cover" />
+                    : <Icon name="image" size={20} stroke="var(--border-strong)" />
+                  }
+                </div>
+                <div className="flex-1" style={{ minWidth: 0 }}>
+                  <div className="font-display font-semibold truncate">{p.name}</div>
+                  <div className="text-xs text-muted flex items-center gap-2 flex-wrap" style={{ marginTop: 2 }}>
+                    {priceLabel && <span className="font-mono">{priceLabel}</span>}
+                    <Badge variant={p.is_active ? 'success' : 'neutral'}>{p.is_active ? 'Active' : 'Inactive'}</Badge>
+                    {p.category && <span>{p.category}</span>}
+                  </div>
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
+                  <Button variant="secondary" size="sm" icon="edit"
+                    onClick={() => { setEditingProduct(p); goTo('edit-product') }}>
+                    Edit
+                  </Button>
+                  <Button variant="ghost" size="sm" disabled={togglingId === p.id}
+                    onClick={() => toggleActive(p.id, p.is_active)}>
+                    {togglingId === p.id ? '…' : p.is_active ? 'Deactivate' : 'Activate'}
+                  </Button>
+                </div>
               </div>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="secondary" size="sm" icon="edit"
-                onClick={() => { setEditingProduct(p); goTo('edit-product') }}>Edit</Button>
-              <Button variant="ghost" size="sm">Duplicate</Button>
-            </div>
-          </div>
-        ))}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
@@ -761,38 +876,123 @@ export function ManageProductsScreen({ goTo, setEditingProduct }: {
 export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMember }: {
   goTo: (s: Screen) => void
   mode?: 'add' | 'edit'
-  editingProduct?: Product | null
+  editingProduct?: DbProduct | null
   isProMember: boolean
 }) {
-  const seed = editingProduct || { name: '', description: '', price: '', variations: [], tieredPricing: [{ min: 1, max: null, price: 0 }], videoUrl: '', directSales: false }
-  const [p, setP] = useState({
-    name: seed.name || '',
-    description: seed.description || '',
-    basePrice: '',
-    variations: seed.variations || [],
-    tieredPricing: (seed as Product).tieredPricing || [{ min: 1, max: null, price: 0 }],
-    videoUrl: (seed as Product).videoUrl || '',
-    directSales: (seed as Product).directSales || false,
+  const [brandId, setBrandId]     = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError]         = useState('')
+
+  // Core form state — maps directly to DB columns
+  const [form, setForm] = useState({
+    name:        editingProduct?.name        || '',
+    category:    editingProduct?.category    || '',
+    subcategory: editingProduct?.subcategory || '',
+    description: editingProduct?.description || '',
+    priceMin:    editingProduct?.price_range_min  != null ? String(editingProduct.price_range_min)  : '',
+    priceMax:    editingProduct?.price_range_max  != null ? String(editingProduct.price_range_max)  : '',
+    unit:        editingProduct?.unit        || '',
+    minOrderQty: editingProduct?.min_order_quantity != null ? String(editingProduct.min_order_quantity) : '',
+    tags:        editingProduct?.tags.join(', ') || '',
+    images:      editingProduct?.images      || [] as string[],
+    // UI-only fields (not yet in DB schema)
+    videoUrl:    '',
+    directSales: false,
   })
 
+  // Tiered pricing — UI only, not persisted yet
+  const [tieredPricing, setTieredPricing] = useState([{ min: 1, max: null as number | null, price: 0 }])
+  // Variations — UI only, not persisted yet
+  const [variations, setVariations] = useState<{ name: string; price: number }[]>([])
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return
+      supabase.from('brands').select('id').eq('owner_id', user.id).maybeSingle()
+        .then(({ data: brand }) => { if (brand) setBrandId(brand.id) })
+    })
+  }, [])
+
+  const upd = (k: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setForm(prev => ({ ...prev, [k]: e.target.value }))
+
+  // Tiered pricing handlers
   const setTier = (i: number, key: string, value: string | number | null) => {
-    const arr = [...p.tieredPricing]
-    arr[i] = { ...arr[i], [key]: value }
-    setP({ ...p, tieredPricing: arr })
+    const arr = [...tieredPricing]; arr[i] = { ...arr[i], [key]: value }; setTieredPricing(arr)
   }
   const addTier = () => {
-    const last = p.tieredPricing[p.tieredPricing.length - 1]
-    setP({ ...p, tieredPricing: [...p.tieredPricing, { min: (last.max || last.min) + 1, max: null, price: 0 }] })
+    const last = tieredPricing[tieredPricing.length - 1]
+    setTieredPricing([...tieredPricing, { min: (last.max || last.min) + 1, max: null, price: 0 }])
   }
-  const removeTier = (i: number) => setP({ ...p, tieredPricing: p.tieredPricing.filter((_, idx) => idx !== i) })
+  const removeTier = (i: number) => setTieredPricing(tieredPricing.filter((_, idx) => idx !== i))
 
+  // Variation handlers
   const setVariation = (i: number, key: string, value: string | number) => {
-    const arr = [...p.variations]
-    arr[i] = { ...arr[i], [key]: value }
-    setP({ ...p, variations: arr })
+    const arr = [...variations]; arr[i] = { ...arr[i], [key]: value }; setVariations(arr)
   }
-  const addVariation = () => setP({ ...p, variations: [...p.variations, { name: '', price: 0 }] })
-  const removeVariation = (i: number) => setP({ ...p, variations: p.variations.filter((_, idx) => idx !== i) })
+  const addVariation  = () => setVariations([...variations, { name: '', price: 0 }])
+  const removeVariation = (i: number) => setVariations(variations.filter((_, idx) => idx !== i))
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    if (!form.name.trim())        { setError('Product name is required.'); return }
+    if (!form.category)           { setError('Please select a category.'); return }
+    if (!form.description.trim()) { setError('Description is required.'); return }
+    if (!brandId)                 { setError('Could not find your brand. Please try again.'); return }
+
+    setSubmitting(true)
+    try {
+      const supabase   = createClient()
+      const tags       = form.tags.split(',').map(t => t.trim()).filter(Boolean)
+      const priceMin   = parseFloat(form.priceMin)   || null
+      const priceMax   = parseFloat(form.priceMax)   || null
+      const moq        = parseInt(form.minOrderQty)  || null
+
+      if (mode === 'add') {
+        const baseSlug     = generateSlug(form.name)
+        const slug         = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`
+        const { error: err } = await supabase.from('products').insert({
+          brand_id:           brandId,
+          name:               form.name.trim(),
+          slug,
+          description:        form.description.trim(),
+          images:             form.images,
+          category:           form.category,
+          subcategory:        form.subcategory.trim() || null,
+          min_order_quantity: moq,
+          price_range_min:    priceMin,
+          price_range_max:    priceMax,
+          unit:               form.unit.trim() || null,
+          tags,
+          is_active:          true,
+        })
+        if (err) { setError(err.message); return }
+      } else if (editingProduct) {
+        const { error: err } = await supabase.from('products').update({
+          name:               form.name.trim(),
+          description:        form.description.trim(),
+          images:             form.images,
+          category:           form.category,
+          subcategory:        form.subcategory.trim() || null,
+          min_order_quantity: moq,
+          price_range_min:    priceMin,
+          price_range_max:    priceMax,
+          unit:               form.unit.trim() || null,
+          tags,
+        }).eq('id', editingProduct.id)
+        if (err) { setError(err.message); return }
+      }
+
+      goTo('manage-products')
+    } catch {
+      setError('Network error. Please check your connection and try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <div className="container fade-up" style={{ maxWidth: 820, paddingBottom: 64 }}>
@@ -802,39 +1002,80 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
         sub={mode === 'add' ? 'Create a new product listing for your storefront.' : 'Update product details.'}
       />
 
-      <form onSubmit={(e) => { e.preventDefault(); goTo('manage-products') }}>
+      <form onSubmit={handleSubmit}>
+        {/* ── Basics ──────────────────────────── */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
           <h3 className="font-display font-bold text-lg mb-4">Basics</h3>
-          <Field label="Product name" value={p.name} onChange={(e) => setP({ ...p, name: e.target.value })} required placeholder="Smart Sensor Pro" />
-          <TextArea label="Description" value={p.description} onChange={(e) => setP({ ...p, description: e.target.value })} required
-            placeholder="Tell buyers what this product does, who it's for, and what makes it different." />
-          <Field label="Base price (LKR)" type="number" value={p.basePrice} onChange={(e) => setP({ ...p, basePrice: e.target.value })} required placeholder="89500" />
+
+          <Field label="Product name" value={form.name} onChange={upd('name')} required placeholder="Smart Sensor Pro" />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="mb-4">
+              <label className="field-label">Category <span style={{ color: 'var(--danger)' }}>*</span></label>
+              <select className="field" value={form.category} onChange={upd('category')} required>
+                <option value="">Select category…</option>
+                {INDUSTRIES.filter(i => i !== 'Other').map(i => <option key={i}>{i}</option>)}
+              </select>
+            </div>
+            <Field label="Subcategory" value={form.subcategory} onChange={upd('subcategory')} placeholder="e.g. IoT Sensors" />
+          </div>
+
+          <TextArea label="Description" value={form.description} onChange={upd('description')} required
+            placeholder="Tell buyers what this product does, who it's for, and what makes it different." rows={4} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div>
+              <label className="field-label">Min price (LKR)</label>
+              <input className="field" type="number" min="0" step="0.01" placeholder="89500"
+                value={form.priceMin} onChange={upd('priceMin')} />
+            </div>
+            <div>
+              <label className="field-label">Max price (LKR)</label>
+              <input className="field" type="number" min="0" step="0.01" placeholder="149500"
+                value={form.priceMax} onChange={upd('priceMax')} />
+            </div>
+            <Field label="Unit" placeholder="per kg, per unit…" value={form.unit} onChange={upd('unit')} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <label className="field-label">Min order quantity</label>
+              <input className="field" type="number" min="1" placeholder="10"
+                value={form.minOrderQty} onChange={upd('minOrderQty')} />
+            </div>
+            <div>
+              <Field label="Tags" placeholder="sensor, IoT, industrial" value={form.tags} onChange={upd('tags')} />
+              <div className="text-xs text-muted" style={{ marginTop: -12 }}>Separate tags with commas</div>
+            </div>
+          </div>
         </div>
 
+        {/* ── Media ───────────────────────────── */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
           <h3 className="font-display font-bold text-lg mb-4">Media</h3>
           <label className="field-label">Product images</label>
-          <div style={{ border: '2px dashed var(--border-strong)', borderRadius: 'var(--r-sm)', padding: 28, textAlign: 'center', background: 'var(--bg-alt)' }}>
-            <Icon name="image" size={28} stroke="var(--muted)" />
-            <div className="text-sm text-muted mt-2">Drop images here or click to upload</div>
-            <div className="text-xs text-muted mt-1 font-mono">JPG, PNG up to 5MB · Add up to 8 images</div>
-          </div>
-          <div style={{ marginTop: 16 }}>
+          <ProductImageUploader
+            images={form.images}
+            brandId={brandId || ''}
+            onUpdate={urls => setForm(prev => ({ ...prev, images: urls }))}
+          />
+          <div style={{ marginTop: 20 }}>
             <label className="field-label">Product video</label>
             {isProMember
-              ? <input className="field" type="url" placeholder="https://youtube.com/..." value={p.videoUrl} onChange={(e) => setP({ ...p, videoUrl: e.target.value })} />
+              ? <input className="field" type="url" placeholder="https://youtube.com/..." value={form.videoUrl} onChange={upd('videoUrl')} />
               : <ProLock onUpgrade={() => goTo('subscription')} label="Add a product video to stand out in search results." />
             }
           </div>
         </div>
 
+        {/* ── Tiered pricing (UI only) ─────────── */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display font-bold text-lg">Tiered pricing</h3>
             <span className="text-xs text-muted">Reward bulk buyers with quantity discounts</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {p.tieredPricing.map((t, i) => (
+            {tieredPricing.map((t, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
                 <div>
                   <label className="field-label text-xs">Min qty</label>
@@ -855,14 +1096,15 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
           </div>
         </div>
 
+        {/* ── Variations (UI only) ─────────────── */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-display font-bold text-lg">Variations</h3>
             <span className="text-xs text-muted">Offer different options at different price points</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {p.variations.length === 0 && <div className="text-sm text-muted">No variations yet.</div>}
-            {p.variations.map((v, i) => (
+            {variations.length === 0 && <div className="text-sm text-muted">No variations yet.</div>}
+            {variations.map((v, i) => (
               <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 8, alignItems: 'end' }}>
                 <div>
                   <label className="field-label text-xs">Name</label>
@@ -879,11 +1121,12 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
           </div>
         </div>
 
+        {/* ── Direct sales (UI only) ───────────── */}
         <div className="card" style={{ padding: 24, marginBottom: 24 }}>
           <label className="field-label">Direct sales</label>
           {isProMember ? (
             <label className="flex items-center gap-3" style={{ padding: 14, border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', cursor: 'pointer' }}>
-              <input type="checkbox" checked={p.directSales} onChange={(e) => setP({ ...p, directSales: e.target.checked })} style={{ width: 18, height: 18 }} />
+              <input type="checkbox" checked={form.directSales} onChange={(e) => setForm(prev => ({ ...prev, directSales: e.target.checked }))} style={{ width: 18, height: 18 }} />
               <div className="flex-1">
                 <div className="font-display font-semibold">Enable direct sales</div>
                 <div className="text-xs text-muted">Buyers can purchase this product directly through the marketplace.</div>
@@ -894,9 +1137,17 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
           )}
         </div>
 
+        {error && (
+          <div style={{ background: 'var(--danger-soft)', border: '1px solid rgba(185,28,28,0.2)', borderRadius: 'var(--r-sm)', padding: '10px 14px', color: 'var(--danger)', fontSize: 13, marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+
         <div className="flex gap-3">
-          <Button variant="secondary" type="button" onClick={() => goTo('manage-products')}>Cancel</Button>
-          <Button variant="primary" type="submit" block icon="check">{mode === 'add' ? 'Add product' : 'Save changes'}</Button>
+          <Button variant="secondary" type="button" onClick={() => goTo('manage-products')} disabled={submitting}>Cancel</Button>
+          <Button variant="primary" type="submit" block icon="check" disabled={submitting}>
+            {submitting ? (mode === 'add' ? 'Adding…' : 'Saving…') : (mode === 'add' ? 'Add product' : 'Save changes')}
+          </Button>
         </div>
       </form>
     </div>

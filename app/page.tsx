@@ -35,6 +35,7 @@ import {
   type Product,
   type UserProfile,
 } from '@/lib/data'
+import type { DbProduct } from '@/types/database'
 
 const DEFAULT_PROFILE: UserProfile = {
   fullName:         '',
@@ -54,7 +55,7 @@ export default function App() {
   const [exploreFilter, setExploreFilter] = useState<NavOpts | null>(null)
   const [selectedBusiness, setSelectedBusinessState] = useState<Business | null>(null)
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [editingProduct, setEditingProduct] = useState<DbProduct | null>(null)
   const [isProMember, setIsProMember] = useState(false)
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE)
   const [favorites, setFavorites] = useState<string[]>([])
