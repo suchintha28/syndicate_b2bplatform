@@ -125,20 +125,20 @@ a { color: inherit; text-decoration: none; }
 .topnav-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-family: var(--font-inter-tight, 'Inter Tight'), sans-serif;
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: -0.02em;
+  padding: 0;
 }
-.topnav-brand-mark {
-  width: 28px; height: 28px;
-  background: var(--primary);
-  border-radius: 8px;
-  display: grid; place-items: center;
-  color: white;
-  font-weight: 700;
-  font-size: 14px;
+.topnav-logo {
+  height: 32px;
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+/* Show light logo by default, dark logo in dark mode */
+.topnav-logo-dark  { display: none; }
+.topnav-logo-light { display: block; }
+@media (prefers-color-scheme: dark) {
+  .topnav-logo-light { display: none; }
+  .topnav-logo-dark  { display: block; }
 }
 .topnav-links { display: flex; gap: 4px; flex: 1; }
 .topnav-link {

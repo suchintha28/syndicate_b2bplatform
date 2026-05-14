@@ -29,8 +29,8 @@ export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMe
     <nav className="topnav">
       <div className="topnav-inner">
         <button className="topnav-brand" onClick={() => setScreen('home')}>
-          <span className="topnav-brand-mark">S</span>
-          <span>Syndicate</span>
+          <img src="/logo-light.jpeg" alt="Business Syndicate Group" className="topnav-logo topnav-logo-light" />
+          <img src="/logo-dark.jpeg"  alt="Business Syndicate Group" className="topnav-logo topnav-logo-dark"  />
         </button>
         <div className="topnav-links">
           {NAV_ITEMS.map(item => (
