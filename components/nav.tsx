@@ -22,9 +22,10 @@ interface NavProps {
   isSignedIn?: boolean
   userInitials?: string
   userAvatarUrl?: string
+  notifCount?: number
 }
 
-export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMember = false, isSignedIn = false, userInitials = '?', userAvatarUrl }: NavProps) {
+export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMember = false, isSignedIn = false, userInitials = '?', userAvatarUrl, notifCount = 0 }: NavProps) {
   return (
     <nav className="topnav">
       <div className="topnav-inner">
@@ -61,8 +62,24 @@ export function TopNav({ screen, setScreen, unreadCount, savedCount = 0, isProMe
             )}
           </button>
           {isSignedIn && (
-            <button className="btn btn-ghost btn-icon" aria-label="Notifications">
+            <button
+              className="btn btn-ghost btn-icon"
+              aria-label="Notifications"
+              onClick={() => setScreen('notifications' as Screen)}
+              style={{ position: 'relative' }}
+            >
               <Icon name="bell" size={18} />
+              {notifCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: 4, right: 4,
+                  minWidth: 16, height: 16, borderRadius: 999,
+                  background: 'var(--danger, #dc2626)', color: 'white',
+                  fontSize: 10, fontWeight: 700, display: 'grid', placeItems: 'center',
+                  padding: '0 3px', lineHeight: 1,
+                }}>
+                  {notifCount > 9 ? '9+' : notifCount}
+                </span>
+              )}
             </button>
           )}
           {isSignedIn && !isProMember && (

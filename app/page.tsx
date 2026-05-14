@@ -19,6 +19,7 @@ import {
   MessagesScreen,
   MessageFormScreen,
   SuccessScreen,
+  NotificationsScreen,
 } from '@/components/screens/business'
 import {
   ProfileScreen,
@@ -67,6 +68,7 @@ export default function App() {
   const [rfqCreateOpts,  setRfqCreateOpts]  = useState<{ brandId?: string; brandName?: string; productId?: string }>({})
   const [successContext, setSuccessContext] = useState<'rfq' | 'message' | null>(null)
   const [unreadCount,    setUnreadCount]    = useState(0)
+  const [notifCount,     setNotifCount]     = useState(0)
   // Pending navigation — remembered when a guest is redirected to auth
   const [pendingNav, setPendingNav] = useState<{ screen: Screen; opts?: NavOpts } | null>(null)
 
@@ -169,6 +171,7 @@ export default function App() {
     const GUEST_RESTRICTED: Screen[] = [
       'profile', 'messages', 'message-form', 'rfq-detail',
       'manage-profile', 'manage-products', 'add-product', 'edit-product', 'settings', 'subscription',
+      'notifications',
     ]
     // rfq-create is allowed for guests but redirects to auth, then back after login
     const needsAuth = !user && (GUEST_RESTRICTED.includes(s) || s === 'rfq-create')
@@ -322,6 +325,20 @@ export default function App() {
     fetchCount()
   }, [user, userProfile.brandId])
 
+  useEffect(() => {
+    if (!user) { setNotifCount(0); return }
+    const supabase = createClient()
+    async function fetchNotifCount() {
+      const { count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user!.id)
+        .eq('read', false)
+      setNotifCount(count ?? 0)
+    }
+    fetchNotifCount()
+  }, [user])
+
   const cardStyle = 'bordered' as const
 
   function renderScreen() {
@@ -466,6 +483,8 @@ export default function App() {
             isProMember={isProMember}
           />
         )
+      case 'notifications':
+        return <NotificationsScreen goTo={goTo} onRead={() => setNotifCount(0)} />
       case 'settings':
         return <SettingsScreen goTo={goTo} />
       case 'subscription':
@@ -502,6 +521,7 @@ export default function App() {
         isSignedIn={!!user}
         userInitials={userInitials}
         userAvatarUrl={userProfile.avatarUrl}
+        notifCount={notifCount}
       />
       <main className="main-content">
         {renderScreen()}

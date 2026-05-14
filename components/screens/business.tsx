@@ -5,7 +5,7 @@ import { Icon } from '@/components/icons'
 import { Button, Avatar, Badge, Chip, Field, TextArea, PageHeader, BackLink, Tabs, EmptyState, SkeletonCard, VerifiedMark } from '@/components/ui'
 import { type Business, type Screen, type NavOpts, type UserProfile, INDUSTRIES } from '@/lib/data'
 import { createClient } from '@/lib/supabase/client'
-import type { DbRfq, DbRfqResponse, DbRfqBid } from '@/types/database'
+import type { DbRfq, DbRfqResponse, DbRfqBid, DbNotification } from '@/types/database'
 
 /* ─────────────────────────────────────────────────────────────
    CONSTANTS
@@ -258,10 +258,11 @@ function PublicRfqCard({ rfq, onBid, onView, isSignedIn }: {
    LIVE RFQ CARD (My RFQs / Messages)
    ───────────────────────────────────────────────────────────── */
 
-function LiveRfqCard({ rfq, isSeller, onClick }: {
+function LiveRfqCard({ rfq, isSeller, onClick, bidCount }: {
   rfq: DbRfq
   isSeller: boolean
   onClick?: () => void
+  bidCount?: number
 }) {
   const otherName = isSeller
     ? (rfq.profiles as { full_name?: string; email?: string } | null)?.full_name
@@ -297,6 +298,12 @@ function LiveRfqCard({ rfq, isSeller, onClick }: {
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
             {budget && <span className="font-mono text-xs" style={{ color: 'var(--ink2)' }}>{budget}</span>}
+            {rfq.is_public && bidCount !== undefined && (
+              <span className="text-xs text-muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                <Icon name="file" size={10} />
+                {bidCount} bid{bidCount !== 1 ? 's' : ''}
+              </span>
+            )}
             <p className="text-sm text-muted line-clamp-1" style={{ margin: 0 }}>
               {rfq.message.slice(0, 60)}{rfq.message.length > 60 ? '…' : ''}
             </p>
@@ -396,7 +403,7 @@ export function RFQsScreen({
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { setLoadingMy(false); return }
       supabase.from('rfqs')
-        .select('*, brands(name, slug, logo_url)')
+        .select('*, brands(name, slug, logo_url), profiles(full_name, email, avatar_url), rfq_bids(id)')
         .eq('buyer_id', user.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => {
@@ -511,6 +518,7 @@ export function RFQsScreen({
               ? <EmptyState icon="file" title="No RFQs yet" sub="Post an RFQ to start receiving bids from verified suppliers." />
               : myRfqs.map(r => (
                   <LiveRfqCard key={r.id} rfq={r} isSeller={false}
+                    bidCount={(r as unknown as { rfq_bids?: { id: string }[] }).rfq_bids?.length ?? 0}
                     onClick={() => goTo('rfq-detail', { rfqId: r.id })} />
                 ))
         )}
@@ -856,7 +864,7 @@ function BidForm({
     setSubmitting(true)
     setError('')
     const supabase = createClient()
-    const { error: err } = await supabase.from('rfq_bids').insert({
+    const { data: bidData, error: err } = await supabase.from('rfq_bids').insert({
       rfq_id:      rfqId,
       bidder_id:   userId,
       brand_id:    brandId,
@@ -867,9 +875,26 @@ function BidForm({
       notes:       notes.trim() || null,
       images,
       status:      'pending',
-    })
+    }).select().single()
     setSubmitting(false)
     if (err) { setError(err.message); return }
+    // Notify the RFQ buyer
+    try {
+      const [{ data: rfqRow }, { data: brandRow }] = await Promise.all([
+        supabase.from('rfqs').select('buyer_id, subject').eq('id', rfqId).single(),
+        supabase.from('brands').select('name').eq('id', brandId).single(),
+      ])
+      if (rfqRow && brandRow && bidData) {
+        await supabase.from('notifications').insert({
+          user_id: rfqRow.buyer_id,
+          type:    'bid_received',
+          title:   `New bid on "${rfqRow.subject}"`,
+          body:    `${brandRow.name} submitted a bid. Review it in your RFQ.`,
+          rfq_id:  rfqId,
+          bid_id:  bidData.id,
+        })
+      }
+    } catch { /* notification insert is non-critical */ }
     onSubmitted()
   }
 
@@ -947,6 +972,8 @@ export function RFQDetailScreen({
   const [showBidForm,setShowBidForm]= useState(false)
   const [bidSubmitted,setBidSubmitted]=useState(false)
   const [myBid,      setMyBid]      = useState<DbRfqBid | null>(null)
+  const [updating,     setUpdating]     = useState(false)
+  const [acceptedBid,  setAcceptedBid]  = useState<DbRfqBid | null>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
 
   const isSeller = !!(rfq && userProfile.brandId && rfq.brand_id && userProfile.brandId === rfq.brand_id)
@@ -971,6 +998,68 @@ export function RFQDetailScreen({
     setBids(bidList)
     const mine = bidList.find(b => b.bidder_id === uid)
     if (mine) setMyBid(mine)
+  }
+
+  async function handleAcceptBid(bid: DbRfqBid) {
+    if (!rfq || !userId) return
+    setUpdating(true)
+    const supabase = createClient()
+    // Accept this bid
+    await supabase.from('rfq_bids').update({ status: 'accepted' }).eq('id', bid.id)
+    // Decline all other pending bids on this RFQ
+    await supabase.from('rfq_bids').update({ status: 'declined' })
+      .eq('rfq_id', rfqId!).neq('id', bid.id).eq('status', 'pending')
+    // Close the RFQ
+    await supabase.from('rfqs').update({ status: 'closed' }).eq('id', rfqId!)
+    // Notify winning bidder
+    try {
+      await supabase.from('notifications').insert({
+        user_id: bid.bidder_id,
+        type:    'bid_accepted',
+        title:   '🎉 Your bid was accepted!',
+        body:    `The buyer accepted your bid on "${rfq.subject}". Contact them through the messaging system to proceed.`,
+        rfq_id:  rfqId,
+        bid_id:  bid.id,
+      })
+    } catch { /* non-critical */ }
+    // Notify other pending bidders they were declined
+    const pendingOthers = bids.filter(b => b.id !== bid.id && b.status === 'pending')
+    await Promise.all(pendingOthers.map(async b => {
+      try {
+        await supabase.from('notifications').insert({
+          user_id: b.bidder_id,
+          type:    'bid_declined',
+          title:   'Bid not selected',
+          body:    `The buyer has selected another supplier for "${rfq.subject}".`,
+          rfq_id:  rfqId,
+          bid_id:  b.id,
+        })
+      } catch { /* non-critical */ }
+    }))
+    await loadBids(supabase, rfqId!, userId)
+    setRfq(prev => prev ? { ...prev, status: 'closed' } : null)
+    setAcceptedBid(bid)
+    setUpdating(false)
+    onStatusChange?.()
+  }
+
+  async function handleDeclineBid(bid: DbRfqBid) {
+    if (!rfq || !userId) return
+    setUpdating(true)
+    const supabase = createClient()
+    await supabase.from('rfq_bids').update({ status: 'declined' }).eq('id', bid.id)
+    try {
+      await supabase.from('notifications').insert({
+        user_id: bid.bidder_id,
+        type:    'bid_declined',
+        title:   'Bid not selected',
+        body:    `The buyer has chosen not to proceed with your bid on "${rfq.subject}".`,
+        rfq_id:  rfqId,
+        bid_id:  bid.id,
+      })
+    } catch { /* non-critical */ }
+    await loadBids(supabase, rfqId!, userId)
+    setUpdating(false)
   }
 
   useEffect(() => {
@@ -1197,9 +1286,43 @@ export function RFQDetailScreen({
                             ))}
                           </div>
                         )}
+                        {isOwner && bid.status === 'pending' && (
+                          <div className="flex gap-2 mt-3" style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+                            <Button variant="primary" size="sm" icon="check"
+                              disabled={updating}
+                              onClick={() => handleAcceptBid(bid)}>
+                              Accept bid
+                            </Button>
+                            <Button variant="secondary" size="sm"
+                              disabled={updating}
+                              onClick={() => handleDeclineBid(bid)}>
+                              Decline
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
+                </div>
+              )}
+              {acceptedBid && (
+                <div className="card" style={{ padding: 16, background: 'var(--success-soft)', borderColor: 'var(--success)', marginTop: 12 }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Icon name="check" size={14} stroke="var(--success)" />
+                    <span className="font-display font-semibold" style={{ color: 'var(--success)' }}>
+                      Bid accepted — {(acceptedBid.brands as { name?: string } | null)?.name || 'Supplier'} selected
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--ink2)', marginBottom: 12 }}>
+                    To proceed with the order, contact this supplier through the messaging system.
+                  </p>
+                  <Button variant="primary" size="sm" icon="message"
+                    onClick={() => goTo('message-form', {
+                      brandId: acceptedBid.brand_id,
+                      brandName: (acceptedBid.brands as { name?: string } | null)?.name,
+                    })}>
+                    Message {(acceptedBid.brands as { name?: string } | null)?.name || 'supplier'}
+                  </Button>
                 </div>
               )}
             </div>
@@ -1468,6 +1591,98 @@ export function MessageFormScreen({ goTo, business }: { goTo: (s: Screen, opts?:
 /* ─────────────────────────────────────────────────────────────
    SuccessScreen
    ───────────────────────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────────────────────
+   NotificationsScreen
+   ───────────────────────────────────────────────────────────── */
+
+export function NotificationsScreen({
+  goTo,
+  onRead,
+}: {
+  goTo: (s: Screen, opts?: NavOpts) => void
+  onRead?: () => void
+}) {
+  const [notifications, setNotifications] = useState<DbNotification[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const supabase = createClient()
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoading(false); return }
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      setNotifications((data || []) as DbNotification[])
+      // Mark all as read
+      await supabase.from('notifications').update({ read: true })
+        .eq('user_id', user.id).eq('read', false)
+      onRead?.()
+      setLoading(false)
+    }
+    load()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function notifIcon(type: string) {
+    if (type === 'bid_accepted') return 'check'
+    if (type === 'bid_declined') return 'close'
+    return 'bell'
+  }
+  function notifColor(type: string) {
+    if (type === 'bid_accepted') return 'var(--success)'
+    if (type === 'bid_declined') return 'var(--danger, #dc2626)'
+    return 'var(--primary)'
+  }
+  function notifBg(type: string) {
+    if (type === 'bid_accepted') return 'var(--success-soft)'
+    if (type === 'bid_declined') return 'rgba(220,38,38,0.07)'
+    return 'var(--primary-soft)'
+  }
+
+  return (
+    <div className="container fade-up" style={{ maxWidth: 640, paddingBottom: 80 }}>
+      <PageHeader eyebrow="Activity" title="Notifications" />
+      {loading ? (
+        [1,2,3].map(i => <SkeletonCard key={i} height={80} />)
+      ) : notifications.length === 0 ? (
+        <EmptyState icon="bell" title="No notifications yet"
+          sub="You'll be notified here when someone bids on your RFQ or your bid status changes." />
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {notifications.map(n => (
+            <button
+              key={n.id}
+              className="card card-hover"
+              onClick={() => n.rfq_id && goTo('rfq-detail', { rfqId: n.rfq_id })}
+              style={{ width: '100%', textAlign: 'left', padding: 16, display: 'flex', gap: 12, alignItems: 'flex-start', opacity: n.read ? 0.75 : 1 }}
+            >
+              <div style={{
+                width: 36, height: 36, borderRadius: 999, flexShrink: 0,
+                background: notifBg(n.type), display: 'grid', placeItems: 'center',
+              }}>
+                <Icon name={notifIcon(n.type)} size={16} stroke={notifColor(n.type)} />
+              </div>
+              <div className="flex-1" style={{ minWidth: 0 }}>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-display font-semibold" style={{ fontSize: 14 }}>{n.title}</span>
+                  <span className="text-xs text-muted" style={{ flexShrink: 0 }}>{fmtDate(n.created_at)}</span>
+                </div>
+                {n.body && <p className="text-sm text-muted" style={{ margin: '2px 0 0', lineHeight: 1.4 }}>{n.body}</p>}
+                {!n.read && (
+                  <span style={{ display: 'inline-block', marginTop: 4, width: 7, height: 7, borderRadius: 999, background: 'var(--primary)' }} />
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function SuccessScreen({ goTo, context }: { goTo: (s: Screen, opts?: NavOpts) => void; context?: 'rfq' | 'message' | null }) {
   const isRfq = context === 'rfq'

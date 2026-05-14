@@ -97,11 +97,24 @@ export interface DbRfqBid {
   notes: string | null
   images: string[]
   status: string                // 'pending' | 'accepted' | 'rejected'
+  read_by_buyer: boolean
   created_at: string
   // Joins
   profiles?: { full_name: string; avatar_url: string | null } | null
   brands?: { name: string; logo_url: string | null } | null
   rfqs?: { subject: string; buyer_id: string; is_public: boolean; status: string } | null
+}
+
+export interface DbNotification {
+  id: string
+  user_id: string
+  type: 'bid_received' | 'bid_accepted' | 'bid_declined'
+  title: string
+  body: string
+  rfq_id: string | null
+  bid_id: string | null
+  read: boolean
+  created_at: string
 }
 
 export interface DbRfqResponse {

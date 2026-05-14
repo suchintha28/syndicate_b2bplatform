@@ -280,6 +280,7 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
   const [dashLoading, setDashLoading]         = useState(true)
   const [products,    setProducts]            = useState<{ id: string; name: string; category: string; is_active: boolean; price_range_min: number | null; images: string[]; slug: string }[]>([])
   const [rfqs,        setRfqs]               = useState<{ id: string; subject: string; message: string; quantity: number | null; unit: string | null; status: string; created_at: string; profiles?: { full_name: string; email: string } | null; brands?: { name: string; slug: string } | null }[]>([])
+  const [bidsReceived, setBidsReceived] = useState(0)
 
   const isSeller = userProfile.role === 'seller'
   const hasBrand = !!userProfile.brandId
@@ -306,6 +307,14 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
           .select('id, subject, message, quantity, unit, status, created_at, brands(name, slug)')
           .eq('buyer_id', userId!).order('created_at', { ascending: false }).limit(5)
         setRfqs((data || []) as unknown as typeof rfqs)
+        // Count bids received on buyer's public RFQs
+        const rfqIds = (data || []).map((r: { id: string }) => r.id)
+        if (rfqIds.length > 0) {
+          const { count } = await supabase.from('rfq_bids')
+            .select('id', { count: 'exact', head: true })
+            .in('rfq_id', rfqIds)
+          setBidsReceived(count ?? 0)
+        }
       }
       setDashLoading(false)
     }
@@ -384,7 +393,7 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
       {dashLoading ? (
         <SkeletonCard height={80} />
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: isSeller && hasBrand ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
           {isSeller && hasBrand && [
             { l: 'Products',       v: totalProducts },
             { l: 'Active',         v: activeProducts },
@@ -397,9 +406,10 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
             </div>
           ))}
           {!isSeller && [
-            { l: 'RFQs sent',   v: totalRfqs },
-            { l: 'Responded',   v: respondedRfqs },
-            { l: 'Saved',       v: savedCount },
+            { l: 'RFQs sent',      v: totalRfqs },
+            { l: 'Bids received',  v: bidsReceived },
+            { l: 'Responded',      v: respondedRfqs },
+            { l: 'Saved',          v: savedCount },
           ].map((s, i) => (
             <div key={i} className="card" style={{ padding: '14px 18px' }}>
               <div className="uppercase-label mb-1" style={{ fontSize: 10 }}>{s.l}</div>

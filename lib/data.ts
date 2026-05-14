@@ -210,6 +210,7 @@ export type Screen =
   | 'success'
   | 'profile' | 'manage-profile' | 'manage-products' | 'add-product' | 'edit-product'
   | 'settings' | 'subscription'
+  | 'notifications'
   | 'auth'
 
 export interface NavOpts {
