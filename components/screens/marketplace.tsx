@@ -388,7 +388,7 @@ export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, f
 /* ── BusinessDetailScreen ───────────────────── */
 export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favorites, toggleFavorite, cardStyle }: {
   business: Business | null
-  goTo: (s: Screen) => void
+  goTo: (s: Screen, opts?: NavOpts) => void
   setSelectedProduct: (p: Product | null) => void
   favorites: string[]
   toggleFavorite: (id: string) => void
@@ -538,7 +538,7 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
             <div className="card" style={{ padding: 32, background: 'var(--ink)', color: 'white', textAlign: 'center', borderColor: 'var(--ink)' }}>
               <h3 className="font-display font-bold text-2xl mb-2">Need a custom quote?</h3>
               <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: 20 }}>Send a detailed RFQ and get bids within 48 hours.</p>
-              <Button variant="primary" size="lg" iconRight="arrow-right" onClick={() => goTo('rfq-create')}>Request a quote</Button>
+              <Button variant="primary" size="lg" iconRight="arrow-right" onClick={() => goTo('rfq-create', { brandId: business.id, brandName: business.name })}>Request a quote</Button>
             </div>
           </section>
         </div>
@@ -551,7 +551,7 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
 export function ProductDetailScreen({ product, business, goTo, setSelectedBusiness }: {
   product: Product | null
   business: Business | null
-  goTo: (s: Screen) => void
+  goTo: (s: Screen, opts?: NavOpts) => void
   setSelectedBusiness: (b: Business | null) => void
 }) {
   if (!product) return null
@@ -581,7 +581,7 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
           <div className="flex gap-2 mb-6 flex-wrap">
             {product.directSales
               ? <Button variant="primary" size="lg" icon="cart">Buy now</Button>
-              : <Button variant="primary" size="lg" icon="file" onClick={() => goTo('rfq-create')}>Request quote</Button>
+              : <Button variant="primary" size="lg" icon="file" onClick={() => goTo('rfq-create', { brandId: business?.id, brandName: business?.name, productId: product.id })}>Request quote</Button>
             }
             <Button variant="secondary" size="lg" icon="message" onClick={() => goTo('message-form')}>Contact seller</Button>
           </div>

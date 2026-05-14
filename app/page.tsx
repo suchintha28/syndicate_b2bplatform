@@ -15,6 +15,7 @@ import {
 import {
   RFQsScreen,
   RFQCreateScreen,
+  RFQDetailScreen,
   MessagesScreen,
   MessageFormScreen,
   SuccessScreen,
@@ -28,7 +29,6 @@ import {
   SubscriptionScreen,
 } from '@/components/screens/account'
 import {
-  MESSAGES,
   type Screen,
   type NavOpts,
   type Business,
@@ -62,6 +62,11 @@ export default function App() {
   const [recentlyViewed, setRecentlyViewed] = useState<string[]>([])
   const [brandsCache, setBrandsCache] = useState<Record<string, Business>>({})
   const [user, setUser] = useState<User | null>(null)
+  // RFQ / messaging navigation context
+  const [selectedRfqId,  setSelectedRfqId]  = useState<string | null>(null)
+  const [rfqCreateOpts,  setRfqCreateOpts]  = useState<{ brandId?: string; brandName?: string; productId?: string }>({})
+  const [successContext, setSuccessContext] = useState<'rfq' | 'message' | null>(null)
+  const [unreadCount,    setUnreadCount]    = useState(0)
 
   useEffect(() => {
     try {
@@ -140,10 +145,23 @@ export default function App() {
 
   const goTo = useCallback((s: Screen, opts?: NavOpts) => {
     // Redirect guests away from all private screens to auth
-    const GUEST_RESTRICTED: Screen[] = ['profile', 'messages', 'message-form', 'rfq-create',
-      'manage-profile', 'manage-products', 'add-product', 'edit-product', 'settings', 'subscription']
+    const GUEST_RESTRICTED: Screen[] = [
+      'profile', 'messages', 'message-form', 'rfq-create', 'rfq-detail',
+      'manage-profile', 'manage-products', 'add-product', 'edit-product', 'settings', 'subscription',
+    ]
     const dest: Screen = (!user && GUEST_RESTRICTED.includes(s)) ? 'auth' : s
-    if (opts) setExploreFilter(opts)
+    // Explore filter (category/tab)
+    if (opts?.category || opts?.tab) setExploreFilter(opts)
+    // RFQ-specific context
+    if (opts?.rfqId)      setSelectedRfqId(opts.rfqId)
+    if (opts?.successContext) setSuccessContext(opts.successContext)
+    if (s === 'rfq-create') {
+      setRfqCreateOpts({
+        brandId:   opts?.brandId,
+        brandName: opts?.brandName,
+        productId: opts?.productId,
+      })
+    }
     window.scrollTo({ top: 0, behavior: 'instant' })
     setScreen(dest)
   }, [user])
@@ -250,7 +268,32 @@ export default function App() {
     return user?.email?.slice(0, 2).toUpperCase() || '?'
   }, [user])
 
-  const unreadCount = user ? MESSAGES.filter(m => m.unread).length : 0
+  // Real unread count: pending RFQs for sellers, responded RFQs for buyers
+  useEffect(() => {
+    if (!user) { setUnreadCount(0); return }
+    const supabase = createClient()
+    async function fetchCount() {
+      if (userProfile.brandId) {
+        // Seller: count pending inbound RFQs
+        const { count } = await supabase
+          .from('rfqs')
+          .select('id', { count: 'exact', head: true })
+          .eq('brand_id', userProfile.brandId)
+          .eq('status', 'pending')
+        setUnreadCount(count ?? 0)
+      } else {
+        // Buyer: count RFQs that have been responded to (new supplier replies)
+        const { count } = await supabase
+          .from('rfqs')
+          .select('id', { count: 'exact', head: true })
+          .eq('buyer_id', user!.id)
+          .eq('status', 'responded')
+        setUnreadCount(count ?? 0)
+      }
+    }
+    fetchCount()
+  }, [user, userProfile.brandId])
+
   const cardStyle = 'bordered' as const
 
   function renderScreen() {
@@ -311,15 +354,42 @@ export default function App() {
           />
         )
       case 'rfqs':
-        return <RFQsScreen goTo={goTo} isSignedIn={!!user} />
+        return (
+          <RFQsScreen
+            goTo={goTo}
+            isSignedIn={!!user}
+          />
+        )
       case 'rfq-create':
-        return <RFQCreateScreen goTo={goTo} />
+        return <RFQCreateScreen goTo={goTo} opts={rfqCreateOpts} />
+      case 'rfq-detail':
+        return (
+          <RFQDetailScreen
+            goTo={goTo}
+            rfqId={selectedRfqId}
+            userProfile={userProfile}
+            onStatusChange={() => {
+              // Re-fetch unread count after any status change
+              if (!user) return
+              const supabase = createClient()
+              if (userProfile.brandId) {
+                supabase.from('rfqs').select('id', { count: 'exact', head: true })
+                  .eq('brand_id', userProfile.brandId).eq('status', 'pending')
+                  .then(({ count }) => setUnreadCount(count ?? 0))
+              } else {
+                supabase.from('rfqs').select('id', { count: 'exact', head: true })
+                  .eq('buyer_id', user.id).eq('status', 'responded')
+                  .then(({ count }) => setUnreadCount(count ?? 0))
+              }
+            }}
+          />
+        )
       case 'messages':
-        return <MessagesScreen goTo={goTo} />
+        return <MessagesScreen goTo={goTo} userProfile={userProfile} />
       case 'message-form':
         return <MessageFormScreen goTo={goTo} business={selectedBusiness} />
       case 'success':
-        return <SuccessScreen goTo={goTo} />
+        return <SuccessScreen goTo={goTo} context={successContext} />
       case 'auth':
         return <AuthScreen goTo={goTo} />
       case 'profile':

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { Icon } from '@/components/icons'
 import { Button, Badge, Avatar, Field, TextArea, PageHeader, BackLink, SkeletonCard } from '@/components/ui'
-import { INDUSTRIES, PLANS, type UserProfile, type Screen } from '@/lib/data'
+import { INDUSTRIES, PLANS, type UserProfile, type Screen, type NavOpts } from '@/lib/data'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/supabase/queries'
 import type { DbProduct } from '@/types/database'
@@ -268,7 +268,7 @@ function DeleteAccountModal({
 
 /* ── ProfileScreen ──────────────────────────── */
 export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDeleteAccount, userId, savedCount = 0 }: {
-  goTo: (s: Screen) => void
+  goTo: (s: Screen, opts?: NavOpts) => void
   isProMember: boolean
   userProfile: UserProfile
   onSignOut?: () => void
@@ -501,7 +501,9 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
         ) : (
           <div className="card" style={{ overflow: 'hidden' }}>
             {rfqs.map((r, i) => (
-              <div key={r.id} style={{ padding: '14px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+              <button key={r.id}
+                onClick={() => goTo('rfq-detail', { rfqId: r.id })}
+                style={{ width: '100%', textAlign: 'left', padding: '14px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', background: 'transparent', cursor: 'pointer', fontFamily: 'inherit', borderLeft: 'none', borderRight: 'none', borderBottom: 'none' }}>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="font-semibold truncate" style={{ fontSize: 14 }}>{r.subject}</div>
@@ -518,7 +520,7 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
                 <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                   {r.message}
                 </p>
-              </div>
+              </button>
             ))}
           </div>
         )}
@@ -604,7 +606,7 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
 
 /* ── ManageProfileScreen ────────────────────── */
 export function ManageProfileScreen({ goTo, userProfile, onSave, isProMember }: {
-  goTo: (s: Screen) => void
+  goTo: (s: Screen, opts?: NavOpts) => void
   userProfile: UserProfile
   onSave?: (p: UserProfile) => Promise<string | null>
   isProMember: boolean
@@ -781,7 +783,7 @@ export function ManageProfileScreen({ goTo, userProfile, onSave, isProMember }: 
 
 /* ── ManageProductsScreen ───────────────────── */
 export function ManageProductsScreen({ goTo, setEditingProduct }: {
-  goTo: (s: Screen) => void
+  goTo: (s: Screen, opts?: NavOpts) => void
   setEditingProduct: (p: DbProduct | null) => void
 }) {
   const [products, setProducts]   = useState<DbProduct[]>([])
@@ -874,7 +876,7 @@ export function ManageProductsScreen({ goTo, setEditingProduct }: {
 
 /* ── ProductFormScreen ──────────────────────── */
 export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMember }: {
-  goTo: (s: Screen) => void
+  goTo: (s: Screen, opts?: NavOpts) => void
   mode?: 'add' | 'edit'
   editingProduct?: DbProduct | null
   isProMember: boolean
@@ -1155,7 +1157,7 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
 }
 
 /* ── SettingsScreen ─────────────────────────── */
-export function SettingsScreen({ goTo }: { goTo: (s: Screen) => void }) {
+export function SettingsScreen({ goTo }: { goTo: (s: Screen, opts?: NavOpts) => void }) {
   const groups = [
     { title: 'Account', items: [
       { label: 'Notifications',       sub: 'Email, push, in-app' },
@@ -1201,7 +1203,7 @@ export function SettingsScreen({ goTo }: { goTo: (s: Screen) => void }) {
 
 /* ── SubscriptionScreen ─────────────────────── */
 export function SubscriptionScreen({ goTo, isProMember, setIsProMember }: {
-  goTo: (s: Screen) => void
+  goTo: (s: Screen, opts?: NavOpts) => void
   isProMember: boolean
   setIsProMember: (v: boolean) => void
 }) {

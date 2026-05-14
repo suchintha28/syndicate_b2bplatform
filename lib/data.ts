@@ -205,7 +205,7 @@ export interface UserProfile {
 
 export type Screen =
   | 'home' | 'listing' | 'detail' | 'product-detail' | 'saved'
-  | 'rfqs' | 'rfq-create'
+  | 'rfqs' | 'rfq-create' | 'rfq-detail'
   | 'messages' | 'message-form'
   | 'success'
   | 'profile' | 'manage-profile' | 'manage-products' | 'add-product' | 'edit-product'
@@ -213,6 +213,13 @@ export type Screen =
   | 'auth'
 
 export interface NavOpts {
+  // Explore filters
   category?: string
   tab?: string
+  // RFQ navigation context
+  brandId?: string
+  brandName?: string
+  productId?: string
+  rfqId?: string
+  successContext?: 'rfq' | 'message'
 }

@@ -73,6 +73,15 @@ export interface DbRfq {
   status: 'pending' | 'read' | 'responded' | 'closed'
   created_at: string
   updated_at: string
-  brands?: { name: string; slug: string }
-  profiles?: { full_name: string; email: string }
+  brands?: { name: string; slug: string; logo_url?: string | null } | null
+  profiles?: { full_name: string; email: string; avatar_url?: string | null } | null
+}
+
+export interface DbRfqResponse {
+  id: string
+  rfq_id: string
+  sender_id: string
+  message: string
+  created_at: string
+  profiles?: { full_name: string; avatar_url: string | null } | null
 }
