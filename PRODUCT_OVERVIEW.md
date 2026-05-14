@@ -4,7 +4,7 @@
 
 ## 1. What Is Syndicate
 
-Syndicate is a B2B marketplace platform built for the Sri Lankan market. It connects buyers looking to source products and services with verified local suppliers. Buyers can browse supplier listings, view products, send RFQs (requests for quotation), and manage their sourcing activity. Suppliers can list their business, showcase products, and receive inquiries — all from one place.
+Syndicate is a B2B marketplace platform built for the Sri Lankan market. It connects buyers looking to source products and services with verified local suppliers. Buyers can browse supplier listings, view products, post RFQs (requests for quotation), receive bids from suppliers, and manage their sourcing activity. Suppliers can list their business, showcase products, receive inquiries, and submit bids on public RFQs — all from one place.
 
 ---
 
@@ -19,6 +19,7 @@ Syndicate is a B2B marketplace platform built for the Sri Lankan market. It conn
 | File Storage | Supabase Storage |
 | Hosting | Vercel |
 | Styling | Custom CSS (design tokens, utility classes) |
+| CLI | Supabase CLI (linked; migrations applied via `supabase db push`) |
 
 ---
 
@@ -26,7 +27,7 @@ Syndicate is a B2B marketplace platform built for the Sri Lankan market. It conn
 
 The app uses a **hybrid pattern**:
 
-- The main experience (`/`) is a **single-page application (SPA)** — a single Next.js page that manages all screens via React state. Navigation between Home, Explore, RFQs, Inbox, Profile, and all sub-screens happens without a full page reload.
+- The main experience (`/`) is a **single-page application (SPA)** — a single Next.js page that manages all screens via React state. Navigation between Home, Explore, RFQs, Inbox, Notifications, Profile, and all sub-screens happens without a full page reload.
 - Authentication pages (`/login`, `/register`, `/forgot-password`, `/auth/reset-password`) are separate **Next.js App Router pages** with their own layouts.
 - The brand onboarding page (`/onboarding/brand`) is a separate full-page route.
 - API logic lives in **Next.js Route Handlers** under `/app/api/`.
@@ -40,10 +41,12 @@ The app uses a **hybrid pattern**:
 ├── detail            — Individual supplier brand page
 ├── product-detail    — Individual product page
 ├── saved             — Saved/favourited suppliers
-├── rfqs              — RFQ board (public view + signed-in view)
-├── rfq-create        — Create a new RFQ (auth required)
-├── messages          — Inbox list
-├── message-form      — Send a message to a supplier
+├── rfqs              — RFQ marketplace (Browse / My RFQs / My Bids tabs)
+├── rfq-create        — Create a new RFQ (guests redirected to auth, then back)
+├── rfq-detail        — RFQ thread (private) or bid board (public)
+├── messages          — Private inbox (private RFQs only)
+├── message-form      — Send a direct message to a supplier
+├── notifications     — In-app notification feed
 ├── success           — Post-action success screen
 ├── auth              — Inline sign-in / sign-up tabs
 ├── profile           — Unified profile + dashboard hub
@@ -67,7 +70,7 @@ The app uses a **hybrid pattern**:
 - **Forgot password** — Sends a reset link via Supabase. The reset link lands on `/auth/reset-password` where the user sets a new password.
 - **Session management** — Supabase handles JWTs and refresh tokens. Session state is tracked in `app/page.tsx` via `onAuthStateChange`.
 - **Sign out** — Clears session and returns to homepage.
-- **Guest access** — Unauthenticated users can browse the marketplace freely. Attempting to access any private screen (profile, messages, RFQ creation, etc.) redirects to the auth screen.
+- **Guest access** — Unauthenticated users can browse the marketplace freely. Attempting to access any private screen redirects to the auth screen. The "New RFQ" button is always visible — clicking it as a guest redirects to login, then automatically continues to the RFQ creation screen after sign-in (pending navigation is preserved in React state).
 
 ### 4.2 Buyer/Seller Role Model
 
@@ -91,43 +94,103 @@ The `buyer` / `seller` flag is an **onboarding routing signal**, not a hard acco
 
 ### 4.4 RFQ System (Request for Quotation)
 
-- Buyers can submit an RFQ to any supplier directly from the supplier's detail page
-- RFQ form captures: subject, message, quantity, unit
-- Unauthenticated users attempting to submit are redirected to the auth screen
-- RFQs are stored in the `rfqs` table, linked to the buyer and the target brand
-- Status lifecycle: `pending → read → responded → closed`
-- Suppliers see incoming RFQs in their Profile dashboard
-- Buyers see their sent RFQs with status in their Profile dashboard
+The RFQ system supports two modes: **public RFQs** (open to all suppliers) and **private RFQs** (direct message to a specific supplier).
 
-### 4.5 Profile — Unified Hub
+#### 4.4.1 Public RFQs
+
+- Created without selecting a supplier — visible on the RFQ marketplace browse board
+- Any supplier with a brand can view and submit a bid
+- Rich fields: subject, message, category, quantity, unit, budget range (min/max in LKR), location, delivery timeline, expiry (2 weeks / 1 month / 2 months / 3 months), images (up to 3)
+- Buyers are informed that RFQs expire and are automatically removed after the chosen period
+- Status lifecycle: `pending → responded → closed`
+- Browse board includes filters: industry/category, budget range, posting time (today / this week / this month)
+- Each public RFQ card on the "My RFQs" tab shows how many bids have been received
+- Buyers can **accept** or **decline** individual bids:
+  - **Accept** → bid marked `accepted`, all other pending bids auto-declined, RFQ closed, winning supplier notified, buyer shown a "Message supplier" CTA
+  - **Decline** → bid marked `declined`, supplier notified
+
+#### 4.4.2 Private RFQs
+
+- Created by selecting a specific supplier — sent directly to that brand
+- Appears in the supplier's Messages/Inbox screen
+- Supports a full conversation thread: both parties can reply
+- Auto-marks as `read` when the supplier opens it
+- Buyer can close the RFQ at any time
+- Status lifecycle: `pending → read → responded → closed`
+
+#### 4.4.3 RFQ Creation
+
+- Toggle between Public and Private at creation time
+- For private RFQs, supplier is pre-filled when navigating from a brand or product page
+- Images can be uploaded to the `rfq-files` storage bucket
+- Guests clicking "New RFQ" are redirected to sign-in, then returned to the creation form
+
+#### 4.4.4 Bid System (Public RFQs)
+
+- Suppliers with a brand can submit bids on any open public RFQ they did not create
+- Bid fields: description (required), price (LKR, optional), delivery timeline, notes, images (up to 2)
+- One bid per brand per RFQ
+- After submitting, a notification is sent to the RFQ buyer
+- Bid status: `pending → accepted` or `declined`
+
+### 4.5 Notifications
+
+- **In-app notification feed** accessible via the bell icon in the top nav
+- Bell shows a red badge with the unread count
+- Clicking the bell opens the Notifications screen
+- Opening the screen automatically marks all notifications as read and resets the badge
+- Clicking any notification navigates directly to the relevant RFQ detail screen
+- **Notification types:**
+  - `bid_received` — buyer is notified when a supplier submits a bid on their public RFQ
+  - `bid_accepted` — supplier is notified when their bid is accepted
+  - `bid_declined` — supplier is notified when their bid is declined or another bid is selected
+- Notifications are stored in the `notifications` table with RLS (users see only their own)
+
+### 4.6 Messages / Inbox
+
+- Shows all **private** RFQs (direct messages to/from suppliers)
+- Public RFQ interactions (bids) are handled through the RFQs screen, not the inbox
+- Sellers see inbound private RFQs with buyer info and status
+- Buyers see their sent private RFQs with supplier info and status
+- Unread badge on the Inbox nav item counts pending (unread) private RFQs
+
+### 4.7 RFQs Screen
+
+Three tabs:
+1. **Browse (Open requests)** — Public RFQs from all buyers, with filters. Visible to guests.
+2. **My RFQs** — Signed-in buyer's own RFQs (both public and private) with status and bid counts.
+3. **My Bids** — Signed-in seller's submitted bids with status.
+
+### 4.8 Profile — Unified Hub
 
 The Profile screen is the single hub for all account activity. Its content adapts based on the signed-in user:
 
 **For all users:**
-- Identity card with name, role badge, plan badge, member since date
-- Quick actions (Explore, Post RFQ, Inbox, Edit Profile)
-- Saved count
+- Identity card with name, role badge, plan badge
+- Quick action buttons
 - Edit profile, Settings, Subscription links
-- Sign out
-- Delete account (with password confirmation)
+- Sign out and Delete account
 
-**For users with a brand:**
-- Live stats: total products, active products, incoming RFQs, pending RFQs (for brand owners) — or RFQs sent, responses, pending, closed (for buyers)
-- Product list (brand owners) — shows up to 5 most recent products with price and status
-- Incoming inquiries list (brand owners) — shows up to 5 recent RFQs with buyer name, date, status pill
-- Sent RFQs list (buyers) — shows recent RFQs with supplier name and status
+**For buyers (4-stat grid):**
+- RFQs Sent · Bids Received · Responded · Saved
+- Recent sent RFQs list (clickable, navigates to RFQ detail)
+
+**For sellers with a brand (4-stat grid):**
+- Products · Active · Incoming RFQs · Pending
+- Recent product list
+- Recent incoming RFQ list (clickable)
 
 **For users without a brand:**
 - "Get listed" dark card CTA to create a brand listing
 
-### 4.6 Brand / Business Onboarding
+### 4.9 Brand / Business Onboarding
 
 - Sellers are redirected here after email confirmation
 - Any user can also reach it via "Get listed" in their profile
 - Form fields: brand logo (upload), business name (pre-filled from signup), industry (pre-filled from signup), city, description, website
 - On submit, creates a row in `brands` and redirects to the homepage
 
-### 4.7 Profile Editing
+### 4.10 Profile Editing
 
 **Personal information:**
 - Profile photo upload (click avatar to upload — JPG/PNG/WebP, max 2 MB)
@@ -137,31 +200,31 @@ The Profile screen is the single hub for all account activity. Its content adapt
 - Brand logo upload (click logo to upload — same format/size limits)
 - Business name, industry, phone, website
 - Description (for users with a marketplace brand listing)
-- All business fields are optional for buyers; required for sellers
 
 Changes are saved to both the `profiles` table (personal + business fields) and the `brands` table (for users with a brand listing).
 
-### 4.8 Image Uploads
+### 4.11 Image Uploads
 
-- **Profile photos** — stored in the `avatars` Supabase Storage bucket. Path: `{userId}/{timestamp}.{ext}`
-- **Brand logos** — stored in the `logos` Supabase Storage bucket. Same path convention.
-- Both buckets are **public read** (images are accessible via URL without auth)
+- **Profile photos** — stored in the `avatars` Supabase Storage bucket
+- **Brand logos** — stored in the `logos` Supabase Storage bucket
+- **RFQ and bid images** — stored in the `rfq-files` Supabase Storage bucket. Path: `{userId}/{timestamp}-{random}.{ext}`
+- All buckets are **public read** (images accessible via URL without auth)
 - Write access is restricted to the file owner via RLS policies on `storage.objects`
-- Images appear everywhere the business or user avatar is displayed: nav bar, homepage cards, explore cards, product cards, supplier detail page, profile screen
-- Falls back to auto-generated initials from the name if no image is uploaded
+- File naming convention: `{userId}/{timestamp}.{ext}` (avatars/logos) or `{userId}/{timestamp}-{random}.{ext}` (rfq-files)
 
-### 4.9 Account Deletion
+### 4.12 Account Deletion
 
 - Available from the Profile screen under the Danger Zone section
 - Triggers a password confirmation modal
 - Calls the `/api/delete-account` server-side route
 - Server re-authenticates the user with the provided password, then calls `auth.admin.deleteUser()` using the service role key
-- Cascade deletes remove all associated data: profile, brands, products, RFQs, RFQ responses, business members
+- Cascade deletes remove all associated data: profile, brands, products, RFQs, RFQ responses, bids, notifications, business members
 - Local state (favourites, recently viewed) is also cleared
 
-### 4.10 Navigation
+### 4.13 Navigation & Branding
 
-- **Top nav** (desktop): Syndicate logo, main nav links, saved heart, notifications bell, upgrade button (for free users), profile avatar
+- **Logo** — Business Syndicate Group logo in the top nav. Light version shown in light mode; dark version shown when the OS is in dark mode (via CSS `prefers-color-scheme`).
+- **Top nav** (desktop): Logo, main nav links, saved heart, notifications bell with unread badge, upgrade button (free users), profile avatar
 - **Bottom nav** (mobile): Home, Explore, RFQs, Inbox, Profile tabs with active indicators and unread badge on Inbox
 - Profile avatar in the nav bar shows the uploaded profile photo, or initials if none
 
@@ -232,22 +295,32 @@ Product listings attached to a brand.
 | `is_active` | boolean | Controls visibility |
 
 #### `rfqs`
-Buyer inquiries sent to a supplier brand.
+Buyer RFQs — either public (open to all suppliers) or private (direct to one supplier).
 
 | Column | Type | Notes |
 |---|---|---|
 | `id` | uuid | Primary key |
 | `buyer_id` | uuid | References `profiles(id)` → CASCADE delete |
-| `brand_id` | uuid | References `brands(id)` → CASCADE delete |
+| `brand_id` | uuid | **Nullable** — null = public RFQ; set = private RFQ to that brand |
 | `product_id` | uuid | Optional — references `products(id)` → SET NULL |
 | `subject` | text | |
 | `message` | text | |
 | `quantity` | integer | |
 | `unit` | text | |
-| `status` | rfq_status enum | `pending`, `read`, `responded`, `closed` |
+| `category` | text | Industry/category for browse filtering |
+| `budget_min` | numeric | LKR |
+| `budget_max` | numeric | LKR |
+| `location` | text | Buyer's location |
+| `timeline` | text | Required delivery timeline |
+| `expires_at` | timestamptz | Auto-set at creation; up to 3 months |
+| `images` | text[] | Uploaded to `rfq-files` bucket |
+| `is_public` | boolean | true = browse board; false = private inbox |
+| `status` | text | `pending`, `read`, `responded`, `closed` |
+| `created_at` | timestamptz | |
+| `updated_at` | timestamptz | |
 
 #### `rfq_responses`
-Threaded replies to an RFQ from either party.
+Threaded replies within a private RFQ conversation.
 
 | Column | Type | Notes |
 |---|---|---|
@@ -255,6 +328,41 @@ Threaded replies to an RFQ from either party.
 | `rfq_id` | uuid | References `rfqs(id)` → CASCADE delete |
 | `sender_id` | uuid | References `profiles(id)` → CASCADE delete |
 | `message` | text | |
+| `created_at` | timestamptz | |
+
+#### `rfq_bids`
+Supplier bids on public RFQs.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | Primary key |
+| `rfq_id` | uuid | References `rfqs(id)` → CASCADE delete |
+| `bidder_id` | uuid | References `profiles(id)` → CASCADE delete |
+| `brand_id` | uuid | References `brands(id)` → CASCADE delete |
+| `description` | text | Required; bid details |
+| `amount` | numeric | Optional; bid price in LKR |
+| `currency` | text | Default `LKR` |
+| `timeline` | text | Optional; delivery timeline |
+| `notes` | text | Optional; extra terms, conditions |
+| `images` | text[] | Uploaded to `rfq-files` bucket |
+| `status` | text | `pending`, `accepted`, `declined` |
+| `read_by_buyer` | boolean | Whether buyer has viewed this bid |
+| `created_at` | timestamptz | |
+
+#### `notifications`
+In-app notifications for bid activity.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | Primary key |
+| `user_id` | uuid | Recipient — references `profiles(id)` → CASCADE delete |
+| `type` | text | `bid_received`, `bid_accepted`, `bid_declined` |
+| `title` | text | Short notification title |
+| `body` | text | Full notification message |
+| `rfq_id` | uuid | References `rfqs(id)` → CASCADE delete (nullable) |
+| `bid_id` | uuid | References `rfq_bids(id)` → CASCADE delete (nullable) |
+| `read` | boolean | Default false; set to true when user views notification feed |
+| `created_at` | timestamptz | |
 
 #### `business_members`
 Membership table linking users to brands (provision for multi-user brand accounts).
@@ -279,9 +387,15 @@ auth.users
       → brands (via owner_id)
           → products
           → rfqs (via brand_id)
+          → rfq_bids (via brand_id)
           → business_members (via brand_id)
       → rfqs (via buyer_id)
+          → rfq_responses
+          → rfq_bids (via rfq_id)
+          → notifications (via rfq_id)
       → rfq_responses (via sender_id)
+      → rfq_bids (via bidder_id)
+      → notifications (via user_id)
       → business_members (via profile_id)
 ```
 
@@ -294,10 +408,13 @@ All tables have RLS enabled. Key policies:
 | `profiles` | Anyone | Owner only (update/delete) |
 | `brands` | Anyone (active brands) | Owner only |
 | `products` | Anyone (active products) | Brand owner only |
-| `rfqs` | Buyer (own RFQs) + brand owner | Buyer (insert), brand owner (update status) |
-| `rfq_responses` | Buyer + brand owner | Buyer or brand owner |
+| `rfqs` | Buyer (own) + brand owner + anyone (if public) | Buyer (insert), buyer/brand owner (update) |
+| `rfq_responses` | Buyer + brand owner of that RFQ | Buyer or brand owner |
+| `rfq_bids` | RFQ owner (all bids on their RFQs) + bidder (own bids) | Brand owner (insert, must own brand) |
+| `notifications` | Owner only | Any authenticated user (insert for cross-user notify) |
 | `business_members` | Own record + brand owner/admin | Brand owner only |
 | `storage.objects` (avatars/logos) | Anyone (public read) | File owner only |
+| `storage.objects` (rfq-files) | Anyone (public read) | File owner only (path enforced) |
 
 ---
 
@@ -320,6 +437,13 @@ Steps 1–4 same as above, then:
 5. User clicks confirmation link → `/auth/callback`
 6. Callback sees `role !== 'seller'` → redirects to `/` directly
 
+### Guest → auth → pending destination
+1. Guest clicks any auth-required button (e.g. "New RFQ")
+2. `goTo()` saves `{ screen, opts }` to `pendingNav` state and navigates to `auth`
+3. User signs in or registers
+4. `useEffect` watching `[user, pendingNav]` fires — navigates to the saved destination with all opts intact
+5. `pendingNav` is cleared after firing
+
 ### Password reset
 1. User visits `/forgot-password`, enters email
 2. `supabase.auth.resetPasswordForEmail()` sends reset link
@@ -337,14 +461,15 @@ Steps 1–4 same as above, then:
 
 ## 7. Storage Buckets
 
-| Bucket | Public | Max file size | Allowed types |
-|---|---|---|---|
-| `avatars` | Yes | 2 MB | image/jpeg, image/png, image/webp |
-| `logos` | Yes | 2 MB | image/jpeg, image/png, image/webp |
+| Bucket | Public | Max file size | Allowed types | Used for |
+|---|---|---|---|---|
+| `avatars` | Yes | 2 MB | image/jpeg, image/png, image/webp | Profile photos |
+| `logos` | Yes | 2 MB | image/jpeg, image/png, image/webp | Brand logos |
+| `rfq-files` | Yes | 5 MB | image/jpeg, image/png, image/webp | RFQ images, bid images |
 
-File naming convention: `{userId}/{timestamp}.{ext}`
-
-The `upsert: true` flag is used on upload so re-uploading replaces the previous file at the same path.
+File naming convention:
+- `avatars` / `logos`: `{userId}/{timestamp}.{ext}` — uses `upsert: true` so re-upload replaces the file
+- `rfq-files`: `{userId}/{timestamp}-{random4chars}.{ext}` — unique per upload
 
 ---
 
@@ -352,21 +477,21 @@ The `upsert: true` flag is used on upload so re-uploading replaces the previous 
 
 | File | Purpose |
 |---|---|
-| `app/page.tsx` | SPA root — all screen state, auth state, profile data, Supabase fetching |
+| `app/page.tsx` | SPA root — all screen state, auth state, profile data, notification count, pending nav |
 | `components/screens/marketplace.tsx` | Home, Explore, Business Detail, Product Detail, Saved screens |
 | `components/screens/account.tsx` | Profile, ManageProfile, ManageProducts, ProductForm, Settings, Subscription screens |
-| `components/screens/business.tsx` | RFQs, RFQ Create, Messages, Message Form, Success screens |
+| `components/screens/business.tsx` | RFQs, RFQ Create, RFQ Detail, Messages, Message Form, Notifications, Success screens |
 | `components/screens/auth.tsx` | Inline auth screen (sign in + sign up tabs) |
-| `components/nav.tsx` | TopNav and BottomNav |
+| `components/nav.tsx` | TopNav and BottomNav (logo, bell badge, unread badge) |
 | `components/cards.tsx` | BusinessCard, ProductCard, MessageCard, CategoryTile |
 | `components/ui.tsx` | Shared UI primitives: Avatar, Button, Badge, Field, Stars, etc. |
 | `components/icons.tsx` | SVG icon library |
-| `lib/data.ts` | TypeScript interfaces (Business, Product, UserProfile), INDUSTRIES list, static dummy data |
+| `lib/data.ts` | TypeScript interfaces (Business, Product, UserProfile, Screen, NavOpts), INDUSTRIES list |
 | `lib/supabase/client.ts` | Browser Supabase client |
 | `lib/supabase/server.ts` | Server-side Supabase client (uses cookies) |
 | `lib/supabase/admin.ts` | Service-role Supabase client (server only, for account deletion) |
 | `lib/supabase/queries.ts` | `dbBrandToBusiness()` and `dbProductToProduct()` adapter functions |
-| `types/database.ts` | TypeScript types matching DB table shapes |
+| `types/database.ts` | TypeScript types: DbBrand, DbProduct, DbProfile, DbRfq, DbRfqBid, DbRfqResponse, DbNotification |
 | `app/auth/callback/route.ts` | OAuth / email confirmation callback handler |
 | `app/api/delete-account/route.ts` | Server route for hard account deletion |
 | `app/onboarding/brand/page.tsx` | Brand creation onboarding page |
@@ -376,6 +501,8 @@ The `upsert: true` flag is used on upload so re-uploading replaces the previous 
 | `app/auth/reset-password/page.tsx` | Password reset completion page |
 | `middleware.ts` | Route protection middleware |
 | `supabase/migrations/` | All DB migration SQL files |
+| `public/logo-light.jpeg` | Business Syndicate Group logo — light version (used in light mode) |
+| `public/logo-dark.jpeg` | Business Syndicate Group logo — dark version (used in dark mode) |
 
 ---
 
@@ -388,6 +515,10 @@ The `upsert: true` flag is used on upload so re-uploading replaces the previous 
 | `20260514000000_profile_delete_policy.sql` | Adds DELETE RLS policy on `profiles` for account deletion |
 | `20260514000001_business_profile_fields.sql` | Adds `business_name/industry/website/phone` to `profiles`; creates `business_members` table; adds `handle_new_brand` trigger |
 | `20260514000002_image_uploads.sql` | Adds `avatar_url` to `profiles`, `logo_url` to `brands`; creates `avatars` and `logos` storage buckets with RLS policies |
+| `20260514000003_product_images.sql` | Adds image upload support for product listings |
+| `20260514000004_rfq_buyer_update.sql` | Adds RLS UPDATE policy so buyers can close their own RFQs |
+| `20260514000005_rfq_enhancements.sql` | Makes `brand_id` nullable (public RFQs); adds `category`, `budget_min/max`, `location`, `timeline`, `expires_at`, `images`, `is_public` to `rfqs`; creates `rfq_bids` table with RLS; creates `rfq-files` storage bucket |
+| `20260514000006_notifications.sql` | Creates `notifications` table with RLS; adds `read_by_buyer` column to `rfq_bids` |
 
 ---
 
@@ -408,26 +539,25 @@ Set in `.env.local` for local development. Set in Vercel project settings for pr
 - **Repository**: GitHub
 - **Hosting**: Vercel (auto-deploys on every push to `main`)
 - **Database**: Supabase (hosted PostgreSQL, separate project)
+- **Supabase CLI**: Linked to the project. Run `supabase db push` to apply any new migrations.
 - **Domain**: Configured in Vercel project settings
 
 To deploy a change:
 1. Make code changes locally
-2. Run `npm run build` to verify no errors
-3. `git add` the changed files
-4. `git commit` with a descriptive message
-5. `git push origin main` — Vercel picks it up automatically
-
-For database changes, run the migration SQL manually in the **Supabase Dashboard → SQL Editor** after pushing code.
+2. Run `npm run build` to verify no TypeScript/lint errors
+3. If a migration file was added, run `/opt/homebrew/bin/supabase db push` — it will prompt before applying
+4. `git add` the changed files
+5. `git commit` with a descriptive message
+6. `git push origin main` — Vercel picks it up automatically
 
 ---
 
 ## 12. Known Limitations / Future Work
 
-- **Messaging** — The Inbox and message form UI exists but messages are not yet persisted to the database. Currently uses static placeholder data.
-- **RFQ board** — The public RFQ board screen shows a list of open RFQs but the data is partially static; full live RFQ board is not yet implemented.
-- **Product management UI** — The Manage Products and Product Form screens exist in the SPA but product create/edit is not yet wired to Supabase.
 - **Multi-user brand accounts** — The `business_members` table is in place and the `owner` row is auto-created, but the UI for inviting team members is not yet built.
 - **Verification** — The `is_verified` flag exists on brands and is displayed in the UI but the admin verification workflow is not yet built.
 - **Search** — The Explore screen has filter UI but full-text search against the database is not yet implemented; currently filtering is done client-side on fetched data.
-- **Notifications** — The bell icon appears in the nav but notifications are not yet wired up.
 - **Cover images** — `brands.cover_image_url` exists in the schema but upload is not yet exposed in the UI; currently falls back to category-based stock images.
+- **RFQ expiry enforcement** — `expires_at` is stored and displayed, and the browse board filters out expired RFQs client-side, but there is no server-side job to hard-delete expired rows. A Supabase cron job or pg_cron task would be needed for automatic cleanup.
+- **Push notifications** — Notifications are in-app only. No email or mobile push notifications are sent yet.
+- **Bid counter-offers** — Buyers can only accept or decline bids as-is. A negotiation/counter-offer flow is not yet built.
