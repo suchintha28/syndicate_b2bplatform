@@ -104,6 +104,28 @@ export default function App() {
     setScreen('home')
   }, [])
 
+  // Returns an error string on failure, or null on success
+  const deleteAccount = useCallback(async (password: string): Promise<string | null> => {
+    try {
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      const data = await res.json()
+      if (!res.ok) return data.error ?? 'Account deletion failed.'
+      // Clear all local state and sign out
+      setUser(null)
+      setFavorites([])
+      setRecentlyViewed([])
+      setBrandsCache({})
+      setScreen('home')
+      return null
+    } catch {
+      return 'Network error. Please check your connection and try again.'
+    }
+  }, [])
+
   const setSelectedBusiness = useCallback((b: Business | null) => {
     setSelectedBusinessState(b)
     if (b) {
@@ -212,6 +234,7 @@ export default function App() {
             isProMember={isProMember}
             userProfile={userProfile}
             onSignOut={signOut}
+            onDeleteAccount={deleteAccount}
           />
         )
       case 'manage-profile':

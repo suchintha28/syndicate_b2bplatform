@@ -19,14 +19,125 @@ function ProLock({ onUpgrade, label }: { onUpgrade: () => void; label: string })
   )
 }
 
+/* ── DeleteAccountModal ─────────────────────── */
+function DeleteAccountModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: (password: string) => Promise<string | null>
+  onCancel: () => void
+}) {
+  const [password, setPassword] = useState('')
+  const [error, setError]       = useState('')
+  const [loading, setLoading]   = useState(false)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    const err = await onConfirm(password)
+    setLoading(false)
+    if (err) setError(err)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(2px)',
+      display: 'grid', placeItems: 'center', padding: 24,
+    }}>
+      <div className="card fade-up" style={{ width: '100%', maxWidth: 440, padding: 28 }}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 'var(--r-sm)', background: 'var(--danger-soft)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+            <Icon name="trash" size={20} stroke="var(--danger)" />
+          </div>
+          <div>
+            <div className="font-display font-bold text-lg" style={{ marginBottom: 4 }}>Delete account</div>
+            <div className="text-sm text-muted">This permanently deletes your account, brand, all products, and RFQ history. This cannot be undone.</div>
+          </div>
+        </div>
+
+        <div style={{ background: 'var(--danger-soft)', border: '1px solid rgba(185,28,28,0.2)', borderRadius: 'var(--r-sm)', padding: '10px 14px', marginBottom: 20 }}>
+          <div className="text-sm" style={{ color: 'var(--danger)', fontWeight: 500 }}>
+            Enter your password to confirm you want to permanently delete your account.
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <label className="field-label">Password</label>
+            <input
+              className="field"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+              autoFocus
+            />
+          </div>
+
+          {error && (
+            <div style={{
+              background: 'var(--danger-soft)', border: '1px solid rgba(185,28,28,0.2)',
+              borderRadius: 'var(--r-sm)', padding: '10px 14px',
+              color: 'var(--danger)', fontSize: 13, marginBottom: 16,
+            }}>
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button variant="secondary" type="button" onClick={onCancel} disabled={loading}>
+              Cancel
+            </Button>
+            <button
+              type="submit"
+              disabled={loading || password.length === 0}
+              style={{
+                flex: 1, padding: '10px 20px', borderRadius: 'var(--r-sm)',
+                background: loading || password.length === 0 ? 'var(--danger-soft)' : 'var(--danger)',
+                color: loading || password.length === 0 ? 'var(--danger)' : 'white',
+                border: 'none', fontWeight: 600, fontSize: 14, cursor: loading || password.length === 0 ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit', transition: 'background 0.15s',
+              }}
+            >
+              {loading ? 'Deleting…' : 'Yes, delete my account'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 /* ── ProfileScreen ──────────────────────────── */
-export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut }: {
+export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDeleteAccount }: {
   goTo: (s: Screen) => void
   isProMember: boolean
   userProfile: UserProfile
   onSignOut?: () => void
+  onDeleteAccount?: (password: string) => Promise<string | null>
 }) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+
+  async function handleDeleteConfirm(password: string): Promise<string | null> {
+    if (!onDeleteAccount) return 'Delete not available.'
+    const err = await onDeleteAccount(password)
+    if (!err) setShowDeleteModal(false)
+    return err
+  }
+
   return (
+    <>
+    {showDeleteModal && (
+      <DeleteAccountModal
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setShowDeleteModal(false)}
+      />
+    )}
     <div className="container fade-up" style={{ paddingBottom: 64 }}>
       <PageHeader eyebrow="Account" title="Your business" />
 
@@ -121,6 +232,32 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut }: {
               </button>
             </div>
           )}
+
+          {/* Danger zone */}
+          {onDeleteAccount && (
+            <div style={{ marginTop: 32 }}>
+              <div className="uppercase-label mb-3" style={{ color: 'var(--danger)' }}>Danger zone</div>
+              <div className="card" style={{ padding: 20, border: '1px solid rgba(185,28,28,0.25)', background: 'var(--danger-soft)' }}>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex-1" style={{ minWidth: 200 }}>
+                    <div className="font-display font-semibold" style={{ marginBottom: 4 }}>Delete account</div>
+                    <div className="text-xs text-muted">Permanently removes your account, brand, products, and all associated data. This action cannot be reversed.</div>
+                  </div>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    style={{
+                      padding: '8px 16px', borderRadius: 'var(--r-sm)',
+                      border: '1px solid rgba(185,28,28,0.4)', background: 'white',
+                      color: 'var(--danger)', fontWeight: 600, fontSize: 13,
+                      cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
+                    }}
+                  >
+                    Delete account
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Activity */}
@@ -145,6 +282,7 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut }: {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
