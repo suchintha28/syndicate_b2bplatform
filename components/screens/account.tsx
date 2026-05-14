@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Icon } from '@/components/icons'
 import { Button, Badge, Avatar, Field, TextArea, PageHeader, BackLink } from '@/components/ui'
-import { PRODUCTS, CATEGORIES, MY_RFQS, PLANS, type UserProfile, type Product, type Screen } from '@/lib/data'
+import { PRODUCTS, INDUSTRIES, MY_RFQS, PLANS, type UserProfile, type Product, type Screen } from '@/lib/data'
 
 /* ── ProLock ────────────────────────────────── */
 function ProLock({ onUpgrade, label }: { onUpgrade: () => void; label: string }) {
@@ -151,10 +151,12 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
                 <Avatar initials={userProfile.logo} size="xl" />
                 <div className="flex-1" style={{ minWidth: 220 }}>
                   <h2 className="font-display font-bold text-2xl mb-1">
-                    {userProfile.businessName || userProfile.fullName || 'My Account'}
+                    {userProfile.fullName || 'My Account'}
                   </h2>
-                  {userProfile.category && (
-                    <div className="text-muted mb-3">{userProfile.category}</div>
+                  {(userProfile.businessName || userProfile.businessIndustry) && (
+                    <div className="text-muted mb-1" style={{ fontSize: 14 }}>
+                      {[userProfile.businessName, userProfile.businessIndustry].filter(Boolean).join(' · ')}
+                    </div>
                   )}
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant={isProMember ? 'pro' : 'neutral'} icon={isProMember ? 'sparkle' : undefined}>
@@ -324,31 +326,133 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
 }
 
 /* ── ManageProfileScreen ────────────────────── */
-export function ManageProfileScreen({ goTo, userProfile, setUserProfile, isProMember }: {
+export function ManageProfileScreen({ goTo, userProfile, onSave, isProMember }: {
   goTo: (s: Screen) => void
   userProfile: UserProfile
-  setUserProfile: (p: UserProfile) => void
+  onSave?: (p: UserProfile) => Promise<string | null>
   isProMember: boolean
 }) {
-  const upd = (k: keyof UserProfile) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
-    setUserProfile({ ...userProfile, [k]: e.target.value })
+  const [form, setForm] = useState<UserProfile>({ ...userProfile })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const isSeller = form.role === 'seller'
+
+  const upd = (k: keyof UserProfile) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      setForm(prev => ({ ...prev, [k]: e.target.value }))
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    if (!form.fullName.trim()) { setError('Full name is required.'); return }
+    if (isSeller && !form.businessName.trim()) { setError('Business name is required for seller accounts.'); return }
+    if (!onSave) { goTo('profile'); return }
+    setSaving(true)
+    const err = await onSave(form)
+    setSaving(false)
+    if (err) { setError(err); return }
+    goTo('profile')
+  }
 
   return (
     <div className="container fade-up" style={{ maxWidth: 760, paddingBottom: 64 }}>
       <BackLink onClick={() => goTo('profile')}>Back to profile</BackLink>
-      <PageHeader title="Edit profile" sub="Keep your business info up to date so buyers can find you." />
+      <PageHeader title="Edit profile" sub="Keep your information up to date." />
 
-      <form onSubmit={(e) => { e.preventDefault(); goTo('profile') }}>
-        {/* Banner */}
+      <form onSubmit={handleSubmit}>
+
+        {/* ── Personal information ───────────────── */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+          <div className="flex items-center gap-3 mb-4">
+            <Avatar initials={form.logo} size="lg" />
+            <div>
+              <h3 className="font-display font-bold text-lg">Personal information</h3>
+              <div className="text-xs text-muted">Your name and contact details</div>
+            </div>
+          </div>
+          <Field
+            label="Full name"
+            placeholder="Jane Doe"
+            value={form.fullName}
+            onChange={upd('fullName')}
+            required
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="mb-4">
+              <label className="field-label">Email</label>
+              <input
+                className="field"
+                type="email"
+                value={form.email}
+                readOnly
+                style={{ background: 'var(--bg-alt)', cursor: 'not-allowed', color: 'var(--muted)' }}
+              />
+              <div className="text-xs text-muted mt-1">Email cannot be changed here</div>
+            </div>
+            <Field label="Phone" type="tel" placeholder="+94 77 000 0000" value={form.phone} onChange={upd('phone')} />
+          </div>
+        </div>
+
+        {/* ── Business information ───────────────── */}
+        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
+          <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+            <div>
+              <h3 className="font-display font-bold text-lg">Business information</h3>
+              <div className="text-xs text-muted">
+                {isSeller
+                  ? 'Your public brand profile visible on the marketplace'
+                  : 'Optional — add if you represent a company'}
+              </div>
+            </div>
+            {!isSeller && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', background: 'var(--bg-alt)', borderRadius: 'var(--r-xs)', padding: '3px 8px', border: '1px solid var(--border)' }}>
+                Optional
+              </span>
+            )}
+          </div>
+
+          <Field
+            label="Business name"
+            placeholder="Acme Industries Ltd."
+            value={form.businessName}
+            onChange={upd('businessName')}
+            required={isSeller}
+          />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="mb-4">
+              <label className="field-label">Industry</label>
+              <select className="field" value={form.businessIndustry} onChange={upd('businessIndustry')}>
+                <option value="">Select industry…</option>
+                {INDUSTRIES.map(i => <option key={i}>{i}</option>)}
+              </select>
+            </div>
+            <Field label="Business phone" type="tel" placeholder="+94 11 000 0000" value={form.businessPhone} onChange={upd('businessPhone')} />
+          </div>
+
+          <Field label="Business website" type="url" placeholder="https://yourcompany.com" value={form.businessWebsite} onChange={upd('businessWebsite')} />
+
+          {isSeller && (
+            <TextArea
+              label="Business description"
+              placeholder="Describe what your business does, who you serve, and what makes you different…"
+              value={form.description}
+              onChange={upd('description')}
+              rows={5}
+            />
+          )}
+        </div>
+
+        {/* ── Profile banner (Pro) ────────────────── */}
+        <div className="card" style={{ padding: 24, marginBottom: 24 }}>
           <label className="field-label">Profile banner</label>
           {isProMember ? (
             <div>
-              <div style={{ height: 120, borderRadius: 'var(--r-sm)', background: userProfile.bannerColor, display: 'grid', placeItems: 'center', color: 'white', marginBottom: 12, fontWeight: 600 }}>
+              <div style={{ height: 100, borderRadius: 'var(--r-sm)', background: form.bannerColor, display: 'grid', placeItems: 'center', color: 'white', marginBottom: 12, fontWeight: 600 }}>
                 Banner preview
               </div>
-              <input type="color" value={userProfile.bannerColor}
-                onChange={(e) => setUserProfile({ ...userProfile, bannerColor: e.target.value })}
+              <input type="color" value={form.bannerColor}
+                onChange={(e) => setForm(prev => ({ ...prev, bannerColor: e.target.value }))}
                 style={{ width: '100%', height: 40, borderRadius: 'var(--r-xs)' }} />
             </div>
           ) : (
@@ -356,63 +460,17 @@ export function ManageProfileScreen({ goTo, userProfile, setUserProfile, isProMe
           )}
         </div>
 
-        {/* Logo */}
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <label className="field-label">Business logo</label>
-          <div className="flex items-center gap-4 flex-wrap">
-            <Avatar initials={userProfile.logo} size="xl" />
-            <div className="flex-1" style={{ minWidth: 180 }}>
-              <input className="field" type="text"
-                value={userProfile.logo}
-                onChange={(e) => setUserProfile({ ...userProfile, logo: e.target.value.slice(0, 2).toUpperCase() })}
-                maxLength={2} placeholder="MB" />
-              <div className="text-xs text-muted mt-1">Two letters · later you can upload an image</div>
-            </div>
+        {error && (
+          <div style={{ background: 'var(--danger-soft)', border: '1px solid rgba(185,28,28,0.2)', borderRadius: 'var(--r-sm)', padding: '10px 14px', color: 'var(--danger)', fontSize: 13, marginBottom: 16 }}>
+            {error}
           </div>
-        </div>
-
-        {/* Business info */}
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <h3 className="font-display font-bold text-lg mb-4">Business info</h3>
-          <Field label="Business name" value={userProfile.businessName} onChange={upd('businessName')} required />
-          <div className="mb-4">
-            <label className="field-label">Category</label>
-            <select className="field" value={userProfile.category} onChange={upd('category')}>
-              {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-            </select>
-          </div>
-          <TextArea label="Description" value={userProfile.description} onChange={upd('description')} required rows={5} />
-        </div>
-
-        <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <h3 className="font-display font-bold text-lg mb-4">Contact</h3>
-          <Field label="Email" type="email" value={userProfile.email} onChange={upd('email')} required />
-          <Field label="Phone" type="tel" value={userProfile.phone} onChange={upd('phone')} required />
-          <Field label="Website" type="text" value={userProfile.website} onChange={upd('website')} />
-        </div>
-
-        {/* Custom pages */}
-        <div className="card" style={{ padding: 24, marginBottom: 24 }}>
-          <label className="field-label">Custom pages</label>
-          {isProMember ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div className="flex items-center justify-between" style={{ padding: 14, border: '1px solid var(--border)', borderRadius: 'var(--r-sm)' }}>
-                <div>
-                  <div className="font-medium">About Us</div>
-                  <div className="text-xs text-muted">Last updated 2 weeks ago</div>
-                </div>
-                <Button variant="secondary" size="sm" icon="edit">Edit</Button>
-              </div>
-              <Button variant="secondary" size="sm" icon="plus" block>Add custom page</Button>
-            </div>
-          ) : (
-            <ProLock onUpgrade={() => goTo('subscription')} label="Add About Us, FAQ, and other custom pages with Pro." />
-          )}
-        </div>
+        )}
 
         <div className="flex gap-3">
-          <Button variant="secondary" type="button" onClick={() => goTo('profile')}>Cancel</Button>
-          <Button variant="primary" type="submit" block icon="check">Save changes</Button>
+          <Button variant="secondary" type="button" onClick={() => goTo('profile')} disabled={saving}>Cancel</Button>
+          <Button variant="primary" type="submit" block icon="check" disabled={saving}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </Button>
         </div>
       </form>
     </div>

@@ -37,14 +37,16 @@ import {
 } from '@/lib/data'
 
 const DEFAULT_PROFILE: UserProfile = {
-  businessName: '',
-  logo: '?',
-  category: '',
-  email: '',
-  phone: '',
-  website: '',
-  description: '',
-  bannerColor: '#4f46e5',
+  fullName:         '',
+  email:            '',
+  phone:            '',
+  logo:             '?',
+  businessName:     '',
+  businessIndustry: '',
+  businessWebsite:  '',
+  businessPhone:    '',
+  description:      '',
+  bannerColor:      '#4f46e5',
 }
 
 export default function App() {
@@ -110,16 +112,21 @@ export default function App() {
         : (profile.full_name || '').slice(0, 2).toUpperCase() || '?'
 
       setUserProfile({
-        fullName:     profile.full_name,
-        businessName: brand?.name || profile.full_name || 'My Account',
-        logo:         initials,
-        category:     brand?.categories[0] || '',
-        email:        profile.email,
-        phone:        profile.phone || '',
-        website:      brand?.website || '',
-        description:  brand?.description || '',
-        bannerColor:  DEFAULT_PROFILE.bannerColor,
-        role:         profile.role,
+        // Personal
+        fullName: profile.full_name,
+        email:    profile.email,
+        phone:    profile.phone || '',
+        logo:     initials,
+        // Business — sellers use brands table as source of truth;
+        // buyers use the profiles.business_* columns.
+        // Never fall back personal name into businessName.
+        businessName:     brand?.name     || profile.business_name     || '',
+        businessIndustry: brand?.categories[0] || profile.business_industry || '',
+        businessWebsite:  brand?.website  || profile.business_website  || '',
+        businessPhone:    brand?.phone    || profile.business_phone    || '',
+        description:      brand?.description || '',
+        bannerColor:      DEFAULT_PROFILE.bannerColor,
+        role:             profile.role,
       })
     }
 
@@ -164,6 +171,48 @@ export default function App() {
       return 'Network error. Please check your connection and try again.'
     }
   }, [])
+
+  // Save profile edits to Supabase and update local state
+  const saveProfile = useCallback(async (updated: UserProfile): Promise<string | null> => {
+    if (!user) return 'Not signed in.'
+    try {
+      const supabase = createClient()
+
+      // Always update personal + business fields on profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name:         updated.fullName,
+          phone:             updated.phone     || null,
+          business_name:     updated.businessName     || null,
+          business_industry: updated.businessIndustry || null,
+          business_website:  updated.businessWebsite  || null,
+          business_phone:    updated.businessPhone    || null,
+        })
+        .eq('id', user.id)
+
+      if (profileError) return profileError.message
+
+      // Sellers: also sync to brands table (their public marketplace listing)
+      if (updated.role === 'seller' && updated.businessName) {
+        await supabase
+          .from('brands')
+          .update({
+            name:        updated.businessName,
+            description: updated.description || '',
+            website:     updated.businessWebsite  || null,
+            phone:       updated.businessPhone    || null,
+            categories:  updated.businessIndustry ? [updated.businessIndustry] : [],
+          })
+          .eq('owner_id', user.id)
+      }
+
+      setUserProfile(updated)
+      return null
+    } catch {
+      return 'Network error. Please check your connection and try again.'
+    }
+  }, [user])
 
   const setSelectedBusiness = useCallback((b: Business | null) => {
     setSelectedBusinessState(b)
@@ -281,7 +330,7 @@ export default function App() {
           <ManageProfileScreen
             goTo={goTo}
             userProfile={userProfile}
-            setUserProfile={setUserProfile}
+            onSave={saveProfile}
             isProMember={isProMember}
           />
         )

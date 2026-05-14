@@ -167,17 +167,33 @@ export const PLANS: Plan[] = [
   { name: 'Annual Pro',   price: 23500, period: 'month, billed annually',  features: ['Everything in Monthly Pro', 'Featured listings', 'Premium ads & boost', 'Custom pages', 'API access', 'Priority support'], recommended: true },
 ]
 
+// Shared industry list — used in auth screens, register page, and profile edit
+export const INDUSTRIES = [
+  'Manufacturing', 'Technology', 'Construction', 'Logistics',
+  'Food & Beverage', 'Retail & Distribution', 'Healthcare & Pharmaceuticals',
+  'Agriculture & Agribusiness', 'Textiles & Apparel', 'Chemicals & Materials',
+  'Energy & Utilities', 'Financial Services', 'Professional Services',
+  'Hospitality & Tourism', 'Real Estate & Property', 'Education & Training',
+  'Media & Communications', 'Other',
+]
+
 export interface UserProfile {
-  businessName: string
-  logo: string
-  category: string
-  email: string
-  phone: string
-  website: string
-  description: string
+  // ── Personal information ──────────────────────────────────
+  fullName:  string
+  email:     string
+  phone:     string
+  logo:      string   // initials auto-computed from fullName
+
+  // ── Business information (optional buyers / required sellers) ──
+  businessName:     string
+  businessIndustry: string
+  businessWebsite:  string
+  businessPhone:    string
+  description:      string   // public brand description (sellers)
+
+  // ── UI preference ─────────────────────────────────────────
   bannerColor: string
   role?: 'buyer' | 'seller'
-  fullName?: string
 }
 
 export type Screen =

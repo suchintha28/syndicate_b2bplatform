@@ -44,8 +44,21 @@ export interface DbProfile {
   role: 'buyer' | 'seller'
   avatar_url: string | null
   phone: string | null
+  business_name: string | null
+  business_industry: string | null
+  business_website: string | null
+  business_phone: string | null
   created_at: string
   updated_at: string
+}
+
+export interface DbBusinessMember {
+  id: string
+  brand_id: string
+  profile_id: string
+  member_role: 'owner' | 'admin' | 'member'
+  invited_by: string | null
+  joined_at: string
 }
 
 export interface DbRfq {

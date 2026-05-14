@@ -2,30 +2,9 @@
 
 import React, { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { Screen } from '@/lib/data'
+import { INDUSTRIES, type Screen } from '@/lib/data'
 
 type AuthTab = 'signin' | 'signup'
-
-const INDUSTRIES = [
-  'Manufacturing',
-  'Technology & IT',
-  'Construction & Real Estate',
-  'Logistics & Transport',
-  'Food & Beverages',
-  'Professional Services',
-  'Healthcare & Pharmaceuticals',
-  'Agriculture & Farming',
-  'Retail & Distribution',
-  'Finance & Banking',
-  'Hospitality & Tourism',
-  'Education & Training',
-  'Textile & Apparel',
-  'Automotive & Machinery',
-  'Energy & Utilities',
-  'Media & Printing',
-  'Chemicals & Raw Materials',
-  'Other',
-]
 
 /* ── Shared error box ───────────────────────── */
 function ErrorBox({ message }: { message: string }) {
