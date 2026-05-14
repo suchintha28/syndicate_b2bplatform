@@ -450,9 +450,7 @@ export function RFQsScreen({
         eyebrow="Request for quote"
         title="RFQ marketplace"
         sub="Browse open buyer requests or post your own."
-        action={isSignedIn
-          ? <Button variant="primary" icon="plus" onClick={() => goTo('rfq-create')}>New RFQ</Button>
-          : undefined}
+        action={<Button variant="primary" icon="plus" onClick={() => goTo('rfq-create')}>New RFQ</Button>}
       />
 
       <div className="mb-4">

@@ -67,6 +67,8 @@ export default function App() {
   const [rfqCreateOpts,  setRfqCreateOpts]  = useState<{ brandId?: string; brandName?: string; productId?: string }>({})
   const [successContext, setSuccessContext] = useState<'rfq' | 'message' | null>(null)
   const [unreadCount,    setUnreadCount]    = useState(0)
+  // Pending navigation — remembered when a guest is redirected to auth
+  const [pendingNav, setPendingNav] = useState<{ screen: Screen; opts?: NavOpts } | null>(null)
 
   useEffect(() => {
     try {
@@ -94,6 +96,25 @@ export default function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  // After login, redirect to any pending navigation (e.g. rfq-create clicked as guest)
+  useEffect(() => {
+    if (!user || !pendingNav) return
+    const { screen: s, opts } = pendingNav
+    setPendingNav(null)
+    if (opts?.category || opts?.tab) setExploreFilter(opts)
+    if (opts?.rfqId) setSelectedRfqId(opts.rfqId)
+    if (opts?.successContext) setSuccessContext(opts.successContext)
+    if (s === 'rfq-create') {
+      setRfqCreateOpts({
+        brandId:   opts?.brandId,
+        brandName: opts?.brandName,
+        productId: opts?.productId,
+      })
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    setScreen(s)
+  }, [user, pendingNav])
 
   // Fetch real profile + brand data whenever the signed-in user changes
   useEffect(() => {
@@ -146,10 +167,17 @@ export default function App() {
   const goTo = useCallback((s: Screen, opts?: NavOpts) => {
     // Redirect guests away from all private screens to auth
     const GUEST_RESTRICTED: Screen[] = [
-      'profile', 'messages', 'message-form', 'rfq-create', 'rfq-detail',
+      'profile', 'messages', 'message-form', 'rfq-detail',
       'manage-profile', 'manage-products', 'add-product', 'edit-product', 'settings', 'subscription',
     ]
-    const dest: Screen = (!user && GUEST_RESTRICTED.includes(s)) ? 'auth' : s
+    // rfq-create is allowed for guests but redirects to auth, then back after login
+    const needsAuth = !user && (GUEST_RESTRICTED.includes(s) || s === 'rfq-create')
+    if (needsAuth) {
+      setPendingNav({ screen: s, opts })
+      window.scrollTo({ top: 0, behavior: 'instant' })
+      setScreen('auth')
+      return
+    }
     // Explore filter (category/tab)
     if (opts?.category || opts?.tab) setExploreFilter(opts)
     // RFQ-specific context
@@ -163,7 +191,7 @@ export default function App() {
       })
     }
     window.scrollTo({ top: 0, behavior: 'instant' })
-    setScreen(dest)
+    setScreen(s)
   }, [user])
 
   const signOut = useCallback(async () => {
