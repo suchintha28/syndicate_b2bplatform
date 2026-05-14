@@ -55,7 +55,10 @@ The app uses a **hybrid pattern**:
 ├── add-product       — Add a new product
 ├── edit-product      — Edit an existing product
 ├── settings          — Account settings
-└── subscription      — Pro plan upgrade
+├── subscription      — Pro plan upgrade
+├── about             — About Us page
+├── privacy           — Privacy Policy page
+└── contact           — Contact Us page
 ```
 
 ---
@@ -86,8 +89,8 @@ The `buyer` / `seller` flag is an **onboarding routing signal**, not a hard acco
 - **Featured suppliers** section on homepage (most recently joined)
 - **Trending products** section on homepage
 - **Explore / Search** page with filters: category, price range, rating, location
-- **Supplier detail page** — full brand profile with description, category, verification status, contact, and product listing
-- **Product detail page** — product info, pricing, MOQ, images, link back to supplier
+- **Supplier detail page** — full brand profile with description, category, verification status, contact, and product listing. Includes an auth-gated **Write a review** button; reviews are submitted via a modal (star rating + title + description) and prepended to the review list without a page reload.
+- **Product detail page** — see section 4.14 for the full feature breakdown
 - **Saved / Favourites** — bookmark suppliers; persisted to `localStorage`
 - **Recently viewed** — tracks last 10 viewed suppliers in `localStorage`; shown on homepage
 - Brand logos and product images load from Supabase Storage; fall back to category-based Unsplash images
@@ -226,7 +229,66 @@ Changes are saved to both the `profiles` table (personal + business fields) and 
 - **Logo** — Business Syndicate Group logo in the top nav. Light version shown in light mode; dark version shown when the OS is in dark mode (via CSS `prefers-color-scheme`).
 - **Top nav** (desktop): Logo, main nav links, saved heart, notifications bell with unread badge, upgrade button (free users), profile avatar
 - **Bottom nav** (mobile): Home, Explore, RFQs, Inbox, Profile tabs with active indicators and unread badge on Inbox
+- **Site footer** — 4-column grid (Brand tagline · Marketplace links · Company links · Legal links) rendered below every screen on desktop. Links navigate to About, Contact, Privacy, and key marketplace screens. Copyright bar with year at the bottom.
 - Profile avatar in the nav bar shows the uploaded profile photo, or initials if none
+
+### 4.14 Product Detail Page
+
+The product detail page is a fully interactive buying experience:
+
+**Media gallery**
+- Carousel viewer with previous/next arrow buttons and a slide counter
+- Thumbnail rail below the main image; clicking a thumb jumps to that item
+- Three images auto-generated from Unsplash seeds for demo purposes; video items (when a `videoUrl` is set on the product) show a play icon overlay on the thumbnail
+
+**Buy box**
+- **Variation tiles** — displayed when a product has variations; tiles show name and unit price. Selecting a tile updates the live unit price.
+- **Quantity stepper** — input with −/+ buttons; quick-pick chips for 10, 50, and 100 units. The active chip highlights to match the current qty.
+- **Live pricing** — unit price is calculated from the tiered pricing table for the current quantity. An "Estimated total" line shows qty × unit price in real time.
+- **CTAs** — "Buy now" (direct-sales products only) + "Request quote" (always shown) + "Contact seller". Request quote pre-fills the selected product on the RFQ create screen.
+
+**Sold by card** — links back to the supplier's brand detail page.
+
+**Specifications tabs**
+Three tabs below the buy box:
+1. **Product specs** — structured label/value table (Brand, Category, MOQ, Warranty, Certifications). Populated from `product.productSpecs` if set; defaults to sensible placeholders.
+2. **Technical specs** — structured label/value table (Connectivity, Power, Dimensions, Weight, Temperature). Populated from `product.techSpecs` if set; defaults to placeholders.
+3. **Bulk pricing** — all pricing tiers as cards; the currently active tier (matching the selected qty) is highlighted in indigo.
+
+**Customer reviews**
+- "Write a review" button — auth-gated (signed-out users are sent to the auth screen).
+- Review modal: 5-star rating input with hover feedback and verbal label (Poor / Fair / Good / Very good / Excellent), title field, description textarea, and a photo upload slot supporting up to **2 photos**.
+- Submitted reviews are prepended to the list without a page reload.
+- Review cards show reviewer name, company, star rating, date, body text, and any submitted photo thumbnails.
+- Clicking a photo thumbnail opens a **lightbox** overlay for full-size viewing.
+
+### 4.15 Info Pages
+
+Three static informational pages accessible from the footer and direct navigation:
+
+**About Us** (`about`)
+- Stats strip: 1,247 verified suppliers · 8,930 products listed · $2.4B in RFQs YTD · 48h avg. quote response
+- "Why we built this" and "Where we are" prose sections
+- 4-card values grid: Verification not vibes · Speed at scale · Transparent reviews · Built for serious buyers
+- Dark CTA banner linking to RFQ creation
+
+**Privacy Policy** (`privacy`)
+- 10 numbered sections covering: Overview, Information collected, Usage, Sharing, Cookies, Retention, Rights, Security, Policy changes, Contact
+- Sticky table-of-contents sidebar on desktop (≥960px; 2-column layout)
+- Each section has a scroll-linked anchor (`#privacy-{id}`)
+
+**Contact Us** (`contact`)
+- Left column: 4 contact method tiles (Email, Phone, Sales & partnerships, Head office) with icon, value, and sub-label
+- Right column: contact form with name, email, company, topic dropdown (General / Sales / Verification / Press / Bug / Other), and message textarea
+- On submit, shows a success state with the submitted email address and a "Send another" reset button
+
+### 4.16 Add / Edit Product — Specifications
+
+The product form (Add product and Edit product screens) includes a **Specifications** card between the Variations section and the Direct Sales toggle:
+
+- **Product specifications** — editable rows with Label + Value inputs. Defaults: Brand, Model, Warranty. Rows can be added or removed.
+- **Technical specifications** — same row pattern. Starts with one blank row.
+- Values are UI-only state for now (not yet persisted to the database); they will be stored in `products.product_specs` / `products.tech_specs` JSONB columns in a future migration.
 
 ---
 
@@ -478,11 +540,12 @@ File naming convention:
 | File | Purpose |
 |---|---|
 | `app/page.tsx` | SPA root — all screen state, auth state, profile data, notification count, pending nav |
-| `components/screens/marketplace.tsx` | Home, Explore, Business Detail, Product Detail, Saved screens |
-| `components/screens/account.tsx` | Profile, ManageProfile, ManageProducts, ProductForm, Settings, Subscription screens |
+| `components/screens/marketplace.tsx` | Home, Explore, Business Detail (with review modal), Product Detail (gallery, buy box, specs, reviews), Saved screens |
+| `components/screens/account.tsx` | Profile, ManageProfile, ManageProducts, ProductForm (with specs), Settings, Subscription screens |
 | `components/screens/business.tsx` | RFQs, RFQ Create, RFQ Detail, Messages, Message Form, Notifications, Success screens |
 | `components/screens/auth.tsx` | Inline auth screen (sign in + sign up tabs) |
-| `components/nav.tsx` | TopNav and BottomNav (logo, bell badge, unread badge) |
+| `components/screens/info.tsx` | AboutScreen, PrivacyScreen, ContactScreen |
+| `components/nav.tsx` | TopNav, BottomNav, Footer |
 | `components/cards.tsx` | BusinessCard, ProductCard, MessageCard, CategoryTile |
 | `components/ui.tsx` | Shared UI primitives: Avatar, Button, Badge, Field, Stars, etc. |
 | `components/icons.tsx` | SVG icon library |
@@ -561,3 +624,7 @@ To deploy a change:
 - **RFQ expiry enforcement** — `expires_at` is stored and displayed, and the browse board filters out expired RFQs client-side, but there is no server-side job to hard-delete expired rows. A Supabase cron job or pg_cron task would be needed for automatic cleanup.
 - **Push notifications** — Notifications are in-app only. No email or mobile push notifications are sent yet.
 - **Bid counter-offers** — Buyers can only accept or decline bids as-is. A negotiation/counter-offer flow is not yet built.
+- **Reviews persistence** — Business profile and product reviews are UI-only (stored in React state). They reset on page refresh. A `reviews` table migration is needed to persist them.
+- **Product specs persistence** — Product and technical specs entered in the Add/Edit Product form are UI-only and not yet saved to the database. A future migration will add `product_specs` and `tech_specs` JSONB columns to the `products` table.
+- **Gallery images** — The product gallery currently shows the product's primary image plus two Unsplash seed images as placeholders. Full multi-image upload for products is not yet implemented.
+- **Review photo uploads** — Photos added in the review modal are simulated with placeholder Unsplash images (not a real file picker). A storage bucket and upload flow would be needed for production.
