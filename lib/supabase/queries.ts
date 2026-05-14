@@ -38,6 +38,7 @@ export function dbBrandToBusiness(brand: DbBrand): Business {
     founded: new Date(brand.created_at).getFullYear(),
     employees: '10-50',
     cover: brand.cover_image_url || CATEGORY_COVERS[primaryCategory] || DEFAULT_COVER,
+    logoUrl: brand.logo_url || undefined,
   }
 }
 

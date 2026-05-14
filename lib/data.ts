@@ -28,6 +28,7 @@ export interface Business {
   founded: number
   employees: string
   cover: string
+  logoUrl?: string
 }
 
 export const BUSINESSES: Business[] = [
@@ -198,6 +199,8 @@ export interface UserProfile {
   // ── UI preference ─────────────────────────────────────────
   bannerColor: string
   role?: 'buyer' | 'seller'
+  avatarUrl?: string   // personal profile photo
+  logoUrl?: string     // brand/business logo
 }
 
 export type Screen =

@@ -6,6 +6,73 @@ import { Button, Badge, Avatar, Field, TextArea, PageHeader, BackLink, SkeletonC
 import { PRODUCTS, INDUSTRIES, PLANS, type UserProfile, type Product, type Screen } from '@/lib/data'
 import { createClient } from '@/lib/supabase/client'
 
+/* ── Image upload helper ────────────────────── */
+async function uploadImage(
+  file: File,
+  bucket: 'avatars' | 'logos',
+  userId: string,
+): Promise<string | null> {
+  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+  const path = `${userId}/${Date.now()}.${ext}`
+  const supabase = createClient()
+  const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
+  if (error) return null
+  const { data } = supabase.storage.from(bucket).getPublicUrl(path)
+  return data.publicUrl
+}
+
+/* ── ImageUploadCircle ──────────────────────── */
+function ImageUploadCircle({
+  src, initials, size = 'lg', bucket, userId, onUploaded, label,
+}: {
+  src?: string
+  initials?: string
+  size?: 'sm' | 'md' | 'lg' | 'xl'
+  bucket: 'avatars' | 'logos'
+  userId?: string
+  onUploaded: (url: string) => void
+  label: string
+}) {
+  const [uploading, setUploading] = useState(false)
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2 MB.'); return }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Please use a JPG, PNG, or WebP image.')
+      return
+    }
+    setUploading(true)
+    const url = await uploadImage(file, bucket, userId)
+    setUploading(false)
+    if (url) onUploaded(url)
+  }
+
+  return (
+    <div style={{ position: 'relative', display: 'inline-block', cursor: userId ? 'pointer' : 'default' }}
+      onClick={() => userId && inputRef.current?.click()}>
+      <Avatar src={src} initials={initials} size={size} />
+      {userId && (
+        <div style={{
+          position: 'absolute', bottom: 0, right: 0,
+          width: 22, height: 22, borderRadius: '50%',
+          background: 'var(--primary)', border: '2px solid white',
+          display: 'grid', placeItems: 'center',
+        }}>
+          {uploading
+            ? <div style={{ width: 8, height: 8, borderRadius: '50%', border: '2px solid white', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+            : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          }
+        </div>
+      )}
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp"
+        style={{ display: 'none' }} onChange={handleFile} aria-label={label} />
+    </div>
+  )
+}
+
 /* ── Status helpers ─────────────────────────── */
 const RFQ_STATUS: Record<string, { label: string; color: string; bg: string }> = {
   pending:   { label: 'Pending',   color: 'var(--warning)',       bg: 'var(--warning-soft, #fef9c3)' },
@@ -209,7 +276,7 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
         <div style={{ position: 'absolute', top: 0, right: 0, width: 200, height: 200, background: 'radial-gradient(circle, var(--primary-soft) 0%, transparent 70%)', opacity: 0.6, pointerEvents: 'none' }} />
         <div style={{ position: 'relative' }}>
           <div className="flex items-start gap-4 flex-wrap" style={{ marginBottom: 20 }}>
-            <Avatar initials={userProfile.logo} size="xl" />
+            <Avatar src={userProfile.avatarUrl} initials={userProfile.logo} size="xl" />
             <div className="flex-1" style={{ minWidth: 200 }}>
               <h2 className="font-display font-bold" style={{ fontSize: 22, margin: '0 0 2px' }}>
                 {userProfile.fullName || 'My Account'}
@@ -276,6 +343,26 @@ export function ProfileScreen({ goTo, isProMember, userProfile, onSignOut, onDel
               <div className="font-display font-bold" style={{ fontSize: 22 }}>{s.v}</div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ── List your business CTA (no brand yet) ── */}
+      {!hasBrand && (
+        <div className="card" style={{ padding: 24, marginBottom: 20, background: 'var(--ink)', color: 'white', borderColor: 'transparent' }}>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div style={{ flex: 1 }}>
+              <div className="font-display font-bold" style={{ fontSize: 16, marginBottom: 4 }}>List your business on the marketplace</div>
+              <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: 13 }}>
+                Create a brand profile to showcase your products and receive inquiries from buyers.
+              </div>
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={() => { window.location.href = '/onboarding/brand' }}
+            >
+              Get listed
+            </button>
+          </div>
         </div>
       )}
 
@@ -463,6 +550,10 @@ export function ManageProfileScreen({ goTo, userProfile, onSave, isProMember }: 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const isSeller = form.role === 'seller'
+  const [userId, setUserId] = useState<string | undefined>()
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data: { user } }) => setUserId(user?.id))
+  }, [])
 
   const upd = (k: keyof UserProfile) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -491,10 +582,18 @@ export function ManageProfileScreen({ goTo, userProfile, onSave, isProMember }: 
         {/* ── Personal information ───────────────── */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
           <div className="flex items-center gap-3 mb-4">
-            <Avatar initials={form.logo} size="lg" />
+            <ImageUploadCircle
+              src={form.avatarUrl}
+              initials={form.logo}
+              size="lg"
+              bucket="avatars"
+              userId={userId}
+              onUploaded={url => setForm(prev => ({ ...prev, avatarUrl: url }))}
+              label="Upload profile photo"
+            />
             <div>
               <h3 className="font-display font-bold text-lg">Personal information</h3>
-              <div className="text-xs text-muted">Your name and contact details</div>
+              <div className="text-xs text-muted">Click the avatar to upload a photo</div>
             </div>
           </div>
           <Field
@@ -522,20 +621,33 @@ export function ManageProfileScreen({ goTo, userProfile, onSave, isProMember }: 
 
         {/* ── Business information ───────────────── */}
         <div className="card" style={{ padding: 24, marginBottom: 16 }}>
-          <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
-            <div>
-              <h3 className="font-display font-bold text-lg">Business information</h3>
-              <div className="text-xs text-muted">
-                {isSeller
-                  ? 'Your public brand profile visible on the marketplace'
-                  : 'Optional — add if you represent a company'}
+          <div className="flex items-start gap-4 mb-4 flex-wrap">
+            <ImageUploadCircle
+              src={form.logoUrl}
+              initials={form.logo || form.businessName?.slice(0, 2).toUpperCase() || '?'}
+              size="lg"
+              bucket="logos"
+              userId={userId}
+              onUploaded={url => setForm(prev => ({ ...prev, logoUrl: url }))}
+              label="Upload business logo"
+            />
+            <div className="flex-1">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="font-display font-bold text-lg">Business information</h3>
+                  <div className="text-xs text-muted">
+                    {isSeller
+                      ? 'Click the logo to upload · visible on the marketplace'
+                      : 'Optional — add if you represent a company'}
+                  </div>
+                </div>
+                {!isSeller && (
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', background: 'var(--bg-alt)', borderRadius: 'var(--r-xs)', padding: '3px 8px', border: '1px solid var(--border)' }}>
+                    Optional
+                  </span>
+                )}
               </div>
             </div>
-            {!isSeller && (
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted)', background: 'var(--bg-alt)', borderRadius: 'var(--r-xs)', padding: '3px 8px', border: '1px solid var(--border)' }}>
-                Optional
-              </span>
-            )}
           </div>
 
           <Field

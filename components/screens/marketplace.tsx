@@ -438,7 +438,7 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
 
         <div className="card" style={{ padding: 28 }}>
           <div className="flex items-start gap-5 flex-wrap" style={{ marginBottom: 24 }}>
-            <Avatar initials={business.logo} size="xl" />
+            <Avatar src={business.logoUrl} initials={business.logo} size="xl" />
             <div className="flex-1" style={{ minWidth: 240 }}>
               <h1 className="page-title" style={{ fontSize: 32, margin: '0 0 10px', lineHeight: 1.1 }}>{business.name}</h1>
               <div className="flex items-center gap-2 flex-wrap mb-3">
@@ -592,7 +592,7 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
               onClick={() => { setSelectedBusiness(business); goTo('detail') }}>
               <div className="uppercase-label mb-2">Sold by</div>
               <div className="flex items-center gap-3">
-                <Avatar initials={business.logo} size="md" />
+                <Avatar src={business.logoUrl} initials={business.logo} size="md" />
                 <div className="flex-1" style={{ minWidth: 0 }}>
                   <div style={{ lineHeight: 1.2, marginBottom: 2 }}>
                     <span className="font-display font-semibold">{business.name}</span>

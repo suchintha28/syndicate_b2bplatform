@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/supabase/queries'
@@ -14,16 +14,21 @@ export default function BrandOnboardingPage() {
     description: '',
     website: '',
     city: '',
+    logoUrl: '',
   })
   const [prefillLoading, setPrefillLoading] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [userId, setUserId] = useState('')
+  const logoInputRef = React.useRef<HTMLInputElement>(null)
 
   // Pre-fill business name + industry from sign-up data
   useEffect(() => {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) { setPrefillLoading(false); return }
+      setUserId(user.id)
 
       // Prefer profiles table; fall back to auth user_metadata
       supabase.from('profiles')
@@ -44,6 +49,26 @@ export default function BrandOnboardingPage() {
   const upd = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
       setForm(prev => ({ ...prev, [k]: e.target.value }))
+
+  async function handleLogoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !userId) return
+    if (file.size > 2 * 1024 * 1024) { alert('Image must be under 2 MB.'); return }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('Please use a JPG, PNG, or WebP image.')
+      return
+    }
+    setUploadingLogo(true)
+    const supabase = createClient()
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+    const path = `${userId}/${Date.now()}.${ext}`
+    const { error: upErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true })
+    if (!upErr) {
+      const { data } = supabase.storage.from('logos').getPublicUrl(path)
+      setForm(prev => ({ ...prev, logoUrl: data.publicUrl }))
+    }
+    setUploadingLogo(false)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -72,6 +97,7 @@ export default function BrandOnboardingPage() {
         description: form.description,
         website:     form.website || null,
         city:        form.city || null,
+        logo_url:    form.logoUrl || null,
         is_verified: false,
         is_active:   true,
       })
@@ -107,6 +133,42 @@ export default function BrandOnboardingPage() {
 
         <div className="card" style={{ padding: 32, opacity: prefillLoading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
           <form onSubmit={handleSubmit}>
+            {/* Logo upload */}
+            <div className="mb-4" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div
+                style={{
+                  width: 72, height: 72, borderRadius: '50%',
+                  background: form.logoUrl ? 'transparent' : 'var(--primary-soft)',
+                  border: '2px dashed var(--border-strong)',
+                  display: 'grid', placeItems: 'center',
+                  cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
+                  position: 'relative',
+                }}
+                onClick={() => logoInputRef.current?.click()}
+              >
+                {form.logoUrl
+                  ? <img src={form.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : uploadingLogo
+                    ? <div style={{ width: 20, height: 20, borderRadius: '50%', border: '3px solid var(--primary)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite' }} />
+                    : <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                }
+              </div>
+              <div>
+                <div className="font-display font-semibold" style={{ fontSize: 14, marginBottom: 2 }}>Brand logo</div>
+                <div className="text-muted" style={{ fontSize: 12 }}>
+                  {form.logoUrl ? 'Click to change · ' : ''}JPG, PNG or WebP · max 2 MB
+                </div>
+                {!form.logoUrl && (
+                  <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: 6 }}
+                    onClick={() => logoInputRef.current?.click()}>
+                    Upload logo
+                  </button>
+                )}
+              </div>
+              <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+                style={{ display: 'none' }} onChange={handleLogoFile} />
+            </div>
+
             <div className="mb-4">
               <label className="field-label">Business name</label>
               <input className="field" type="text" placeholder="Acme Industries Ltd." value={form.name} onChange={upd('name')} required />

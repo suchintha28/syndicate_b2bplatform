@@ -129,6 +129,8 @@ export default function App() {
         brandSlug:        brand?.slug,
         bannerColor:      DEFAULT_PROFILE.bannerColor,
         role:             profile.role,
+        avatarUrl:        profile.avatar_url || undefined,
+        logoUrl:          brand?.logo_url    || undefined,
       })
     }
 
@@ -186,6 +188,7 @@ export default function App() {
         .update({
           full_name:         updated.fullName,
           phone:             updated.phone     || null,
+          avatar_url:        updated.avatarUrl || null,
           business_name:     updated.businessName     || null,
           business_industry: updated.businessIndustry || null,
           business_website:  updated.businessWebsite  || null,
@@ -204,6 +207,7 @@ export default function App() {
             description: updated.description || '',
             website:     updated.businessWebsite  || null,
             phone:       updated.businessPhone    || null,
+            logo_url:    updated.logoUrl || null,
             categories:  updated.businessIndustry ? [updated.businessIndustry] : [],
           })
           .eq('owner_id', user.id)
