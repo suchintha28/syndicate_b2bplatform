@@ -26,16 +26,18 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
+    // exchangeCodeForSession returns the user directly — use it instead of
+    // calling getUser() again, because the newly-set session cookie is not
+    // readable in the same server request.
+    const { data: { user }, error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error && user) {
       const forwardedHost = request.headers.get('x-forwarded-host')
       const isLocalEnv = process.env.NODE_ENV === 'development'
       const base = isLocalEnv ? origin : (forwardedHost ? `https://${forwardedHost}` : origin)
 
       // Sellers confirming their email for the first time should go to brand
       // onboarding if they haven't created a brand yet.
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user?.user_metadata?.role === 'seller') {
+      if (user.user_metadata?.role === 'seller') {
         const { data: brand } = await supabase
           .from('brands')
           .select('id')
