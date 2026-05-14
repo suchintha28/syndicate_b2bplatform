@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/supabase/queries'
@@ -10,13 +10,36 @@ export default function BrandOnboardingPage() {
   const router = useRouter()
   const [form, setForm] = useState({
     name: '',
-    category: 'Technology',
+    category: 'Manufacturing',
     description: '',
     website: '',
     city: '',
   })
+  const [prefillLoading, setPrefillLoading] = useState(true)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Pre-fill business name + industry from sign-up data
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { setPrefillLoading(false); return }
+
+      // Prefer profiles table; fall back to auth user_metadata
+      supabase.from('profiles')
+        .select('business_name, business_industry')
+        .eq('id', user.id)
+        .single()
+        .then(({ data: profile }) => {
+          const name     = profile?.business_name     || (user.user_metadata?.business_name as string | undefined) || ''
+          const industry = profile?.business_industry || (user.user_metadata?.industry       as string | undefined) || 'Manufacturing'
+          // Only pre-fill if the field is in the INDUSTRIES list (skip 'Other')
+          const safeIndustry = INDUSTRIES.filter(i => i !== 'Other').includes(industry) ? industry : 'Manufacturing'
+          setForm(prev => ({ ...prev, name, category: safeIndustry }))
+          setPrefillLoading(false)
+        })
+    })
+  }, [])
 
   const upd = (k: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
@@ -82,7 +105,7 @@ export default function BrandOnboardingPage() {
           <p className="text-muted" style={{ fontSize: 15 }}>This is your public business profile on Syndicate. You can update it any time.</p>
         </div>
 
-        <div className="card" style={{ padding: 32 }}>
+        <div className="card" style={{ padding: 32, opacity: prefillLoading ? 0.5 : 1, transition: 'opacity 0.2s' }}>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="field-label">Business name</label>
