@@ -64,11 +64,13 @@ export default function App() {
   const [brandsCache, setBrandsCache] = useState<Record<string, Business>>({})
   const [user, setUser] = useState<User | null>(null)
   // RFQ / messaging navigation context
-  const [selectedRfqId,  setSelectedRfqId]  = useState<string | null>(null)
-  const [rfqCreateOpts,  setRfqCreateOpts]  = useState<{ brandId?: string; brandName?: string; productId?: string }>({})
-  const [successContext, setSuccessContext] = useState<'rfq' | 'message' | null>(null)
-  const [unreadCount,    setUnreadCount]    = useState(0)
-  const [notifCount,     setNotifCount]     = useState(0)
+  const [selectedRfqId,   setSelectedRfqId]   = useState<string | null>(null)
+  const [rfqCreateOpts,   setRfqCreateOpts]   = useState<{ brandId?: string; brandName?: string; productId?: string }>({})
+  const [successContext,  setSuccessContext]   = useState<'rfq' | 'message' | null>(null)
+  const [unreadCount,     setUnreadCount]      = useState(0)
+  const [notifCount,      setNotifCount]       = useState(0)
+  const [messageBrandId,  setMessageBrandId]   = useState<string | undefined>()
+  const [messageBrandName,setMessageBrandName] = useState<string | undefined>()
   // Pending navigation — remembered when a guest is redirected to auth
   const [pendingNav, setPendingNav] = useState<{ screen: Screen; opts?: NavOpts } | null>(null)
 
@@ -192,6 +194,10 @@ export default function App() {
         brandName: opts?.brandName,
         productId: opts?.productId,
       })
+    }
+    if (s === 'message-form') {
+      setMessageBrandId(opts?.brandId)
+      setMessageBrandName(opts?.brandName)
     }
     window.scrollTo({ top: 0, behavior: 'instant' })
     setScreen(s)
@@ -432,7 +438,7 @@ export default function App() {
       case 'messages':
         return <MessagesScreen goTo={goTo} userProfile={userProfile} />
       case 'message-form':
-        return <MessageFormScreen goTo={goTo} business={selectedBusiness} />
+        return <MessageFormScreen goTo={goTo} business={selectedBusiness} brandId={messageBrandId} brandName={messageBrandName} />
       case 'success':
         return <SuccessScreen goTo={goTo} context={successContext} />
       case 'auth':
