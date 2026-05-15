@@ -9,8 +9,8 @@ export default defineConfig({
   name: 'syndicate-cms',
   title: 'Syndicate CMS',
 
-  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID!,
-  dataset:   process.env.NEXT_PUBLIC_SANITY_DATASET ?? 'production',
+  projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || 'mx1vcbbk',
+  dataset:   process.env.NEXT_PUBLIC_SANITY_DATASET   || 'production',
 
   plugins: [
     structureTool({ structure }),
