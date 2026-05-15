@@ -30,7 +30,9 @@ export default async function ProductPage({ params }: { params: { slug: string }
       : `LKR ${Math.round(priceMin).toLocaleString()}`
     : 'Contact for price'
 
-  const imgSrc = product.images[0] || `https://picsum.photos/seed/${product.id}/800/600`
+  const images = product.images ?? []
+  const tags = product.tags ?? []
+  const imgSrc = images[0] || `https://picsum.photos/seed/${product.id}/800/600`
 
   const brandInitials = brand
     ? (() => {
@@ -62,8 +64,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 32 }} className="product-detail-grid">
           {/* Image */}
           <div style={{ borderRadius: 'var(--r-lg)', overflow: 'hidden', aspectRatio: '4/3', background: 'var(--bg-alt)' }}>
-            <img src={imgSrc} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${product.id}/800/600` }} />
+            <img src={imgSrc} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
 
           {/* Details */}
@@ -92,9 +93,9 @@ export default async function ProductPage({ params }: { params: { slug: string }
             </div>
 
             {/* Tags */}
-            {product.tags.length > 0 && (
+            {tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
-                {product.tags.map(tag => (
+                {tags.map(tag => (
                   <span key={tag} className="badge badge-neutral">{tag}</span>
                 ))}
               </div>
@@ -114,7 +115,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
                       )}
                     </div>
                     <div className="text-xs" style={{ color: 'var(--muted)' }}>
-                      {brand.categories[0]} {brand.city ? `· ${brand.city}` : ''}
+                      {(brand.categories ?? [])[0]} {brand.city ? `· ${brand.city}` : ''}
                     </div>
                   </div>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
