@@ -42,8 +42,10 @@ setup('authenticate test user', async ({ page }) => {
   await page.fill('input[type="password"]', password)
   await page.locator('button[type="submit"]').first().click()
 
-  // Wait for a redirect to dashboard — confirms the login succeeded
-  await expect(page).toHaveURL(/dashboard/, { timeout: 15_000 })
+  // Wait for navigation away from /login — confirms auth succeeded.
+  // The app may redirect to /dashboard, /, or /onboarding/brand depending on
+  // whether the account has completed setup; any URL other than /login is fine.
+  await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 15_000 })
 
   // Persist the session (cookies + localStorage containing the Supabase token)
   await page.context().storageState({ path: AUTH_FILE })

@@ -38,7 +38,8 @@ setup('authenticate buyer test user', async ({ page }) => {
   await page.fill('input[type="password"]', password)
   await page.locator('button[type="submit"]').first().click()
 
-  await expect(page).toHaveURL(/dashboard/, { timeout: 15_000 })
+  // Wait for navigation away from /login — any URL confirms auth succeeded.
+  await page.waitForURL(url => !url.pathname.includes('/login'), { timeout: 15_000 })
 
   await page.context().storageState({ path: AUTH_FILE })
   console.log(`[auth.buyer.setup] Saved buyer auth state for ${email}`)

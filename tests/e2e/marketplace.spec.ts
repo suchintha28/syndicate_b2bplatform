@@ -23,14 +23,13 @@ async function getSupplierCount(page: import('@playwright/test').Page): Promise<
   }
 }
 
-// Helper — returns the first supplier card element scoped to the results area
-// (excludes the filter sidebar which also uses card-like CSS classes)
+// Helper — returns the first supplier card element scoped to the results area.
+// The Explore screen renders as two nested <main> elements: the outer one holds
+// the page shell + filter sidebar; the inner one holds the paginated results.
+// Using .last() reliably targets the inner results <main> without needing
+// complex :not() CSS combinators that Playwright can't always resolve.
 function firstSupplierCard(page: import('@playwright/test').Page) {
-  // The results area sits after the complementary filter sidebar in the DOM.
-  // Scope to `[role="main"]` and exclude `[role="complementary"]` children.
-  return page
-    .locator('[role="main"] > :not([role="complementary"]) [class*="card" i], [role="main"] > :not([role="complementary"]) [class*="Card"]')
-    .first()
+  return page.locator('main').last().locator('[class*="card" i], [class*="Card"]').first()
 }
 
 // ---------------------------------------------------------------------------
@@ -92,7 +91,7 @@ test.describe('Explore / Listing screen', () => {
       const card = firstSupplierCard(page)
       await expect(card).toBeVisible({ timeout: 5000 })
     } else {
-      const emptyState = page.locator('text=/no suppliers|no results|empty|no.*match/i').first()
+      const emptyState = page.locator('text=/no suppliers|no results|empty|no.*match|0 suppliers/i').first()
       await expect(emptyState).toBeVisible({ timeout: 5000 })
     }
   })
