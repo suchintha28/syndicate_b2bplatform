@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Button, Field, TextArea, PageHeader, BackLink } from '@/components/ui'
-import { INDUSTRIES, type Screen, type NavOpts } from '@/lib/data'
+import { CATEGORIES, type Screen, type NavOpts } from '@/lib/data'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/supabase/queries'
 import type { DbProduct } from '@/types/database'
@@ -190,7 +190,7 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
               <label className="field-label">Category <span style={{ color: 'var(--danger)' }}>*</span></label>
               <select className="field" value={form.category} onChange={upd('category')} required>
                 <option value="">Select category…</option>
-                {INDUSTRIES.filter(i => i !== 'Other').map(i => <option key={i}>{i}</option>)}
+                {CATEGORIES.map(i => <option key={i}>{i}</option>)}
               </select>
             </div>
             <Field label="Subcategory" value={form.subcategory} onChange={upd('subcategory')} placeholder="e.g. IoT Sensors" />

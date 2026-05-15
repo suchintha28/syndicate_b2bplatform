@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { generateSlug } from '@/lib/supabase/queries'
-import { INDUSTRIES } from '@/lib/data'
+import { CATEGORIES, SL_LOCATIONS } from '@/lib/data'
 
 export default function BrandOnboardingPage() {
   const router = useRouter()
@@ -38,8 +38,8 @@ export default function BrandOnboardingPage() {
         .then(({ data: profile }) => {
           const name     = profile?.business_name     || (user.user_metadata?.business_name as string | undefined) || ''
           const industry = profile?.business_industry || (user.user_metadata?.industry       as string | undefined) || 'Manufacturing'
-          // Only pre-fill if the field is in the INDUSTRIES list (skip 'Other')
-          const safeIndustry = INDUSTRIES.filter(i => i !== 'Other').includes(industry) ? industry : 'Manufacturing'
+          // Only pre-fill if the value is one of the known CATEGORIES
+          const safeIndustry = CATEGORIES.includes(industry) ? industry : 'Manufacturing'
           setForm(prev => ({ ...prev, name, category: safeIndustry }))
           setPrefillLoading(false)
         })
@@ -180,12 +180,15 @@ export default function BrandOnboardingPage() {
               <div>
                 <label className="field-label">Industry</label>
                 <select className="field" value={form.category} onChange={upd('category')}>
-                  {INDUSTRIES.filter(i => i !== 'Other').map(c => <option key={c}>{c}</option>)}
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
               </div>
               <div>
                 <label className="field-label">City <span className="text-muted" style={{ fontWeight: 400 }}>(optional)</span></label>
-                <input className="field" type="text" placeholder="Colombo" value={form.city} onChange={upd('city')} />
+                <select className="field" value={form.city} onChange={upd('city')}>
+                  <option value="">Choose city…</option>
+                  {SL_LOCATIONS.filter(l => l !== 'All Locations').map(l => <option key={l}>{l}</option>)}
+                </select>
               </div>
             </div>
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Button, Field, TextArea, PageHeader, BackLink } from '@/components/ui'
-import { INDUSTRIES, type UserProfile, type Screen, type NavOpts } from '@/lib/data'
+import { CATEGORIES, type UserProfile, type Screen, type NavOpts } from '@/lib/data'
 import { createClient } from '@/lib/supabase/client'
 import { ImageUploadCircle, ProLock } from './_shared'
 
@@ -129,7 +129,7 @@ export function ManageProfileScreen({ goTo, userProfile, onSave, isProMember }: 
               <label className="field-label">Industry</label>
               <select className="field" value={form.businessIndustry} onChange={upd('businessIndustry')}>
                 <option value="">Select industry…</option>
-                {INDUSTRIES.map(i => <option key={i}>{i}</option>)}
+                {CATEGORIES.map(i => <option key={i}>{i}</option>)}
               </select>
             </div>
             <Field label="Business phone" type="tel" placeholder="+94 11 000 0000" value={form.businessPhone} onChange={upd('businessPhone')} />
