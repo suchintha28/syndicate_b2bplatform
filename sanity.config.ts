@@ -2,7 +2,6 @@
 
 import { defineConfig } from 'sanity'
 import { structureTool } from 'sanity/structure'
-import { visionTool } from '@sanity/vision'
 import { schemaTypes } from './sanity/schemaTypes'
 import { structure } from './sanity/structure'
 
@@ -15,7 +14,6 @@ export default defineConfig({
 
   plugins: [
     structureTool({ structure }),
-    visionTool(),          // GROQ playground — remove before production if desired
   ],
 
   schema: { types: schemaTypes },
