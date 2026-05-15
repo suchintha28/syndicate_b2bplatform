@@ -53,16 +53,20 @@ export function dbProductToProduct(product: DbProduct): Product {
     slug: product.slug,
     name: product.name,
     price: priceFormatted,
-    image: product.images[0] || `https://picsum.photos/seed/${product.id}/400/300`,
+    image: (product.images ?? [])[0] || `https://picsum.photos/seed/${product.id}/400/300`,
     category: product.category,
     businessId: product.brand_id,
     status: 'Active' as const,
     sales: 0,
-    variations: [],
-    tieredPricing: priceMin ? [{ min: 1, max: null, price: priceMin }] : [],
+    variations: (product.variations ?? []).map(v => ({ name: v.name, price: Number(v.price) })),
+    tieredPricing: (product.tiered_pricing ?? []).length
+      ? (product.tiered_pricing ?? []).map(t => ({ min: t.min, max: t.max, price: Number(t.price) }))
+      : priceMin ? [{ min: 1, max: null, price: priceMin }] : [],
     videoUrl: '',
     directSales: false,
     description: product.description,
+    productSpecs: (product.product_specs ?? []).map(s => ({ label: s.l, value: s.v })),
+    techSpecs:    (product.tech_specs    ?? []).map(s => ({ label: s.l, value: s.v })),
   }
 }
 

@@ -32,6 +32,10 @@ export interface DbProduct {
   price_range_max: number | null
   unit: string | null
   tags: string[]
+  tiered_pricing: { min: number; max: number | null; price: number }[]
+  variations: { name: string; price: number }[]
+  product_specs: { l: string; v: string }[]
+  tech_specs: { l: string; v: string }[]
   is_active: boolean
   created_at: string
   updated_at: string

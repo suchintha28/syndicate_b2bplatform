@@ -35,18 +35,28 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
     directSales: false,
   })
 
-  // Tiered pricing — UI only, not persisted yet
-  const [tieredPricing, setTieredPricing] = useState([{ min: 1, max: null as number | null, price: 0 }])
-  // Variations — UI only, not persisted yet
-  const [variations, setVariations] = useState<{ name: string; price: number }[]>([])
+  // Tiered pricing — persisted to products.tiered_pricing (JSONB)
+  const [tieredPricing, setTieredPricing] = useState<{ min: number; max: number | null; price: number }[]>(
+    editingProduct?.tiered_pricing?.length
+      ? editingProduct.tiered_pricing
+      : [{ min: 1, max: null, price: 0 }]
+  )
+  // Variations — persisted to products.variations (JSONB)
+  const [variations, setVariations] = useState<{ name: string; price: number }[]>(
+    editingProduct?.variations ?? []
+  )
 
-  // Specs — UI only
-  const [productSpecs, setProductSpecs] = useState<{ l: string; v: string }[]>([
-    { l: 'Brand', v: '' }, { l: 'Model', v: '' }, { l: 'Warranty', v: '' },
-  ])
-  const [techSpecs, setTechSpecs] = useState<{ l: string; v: string }[]>([
-    { l: '', v: '' },
-  ])
+  // Specs — persisted to products.product_specs / tech_specs (JSONB)
+  const [productSpecs, setProductSpecs] = useState<{ l: string; v: string }[]>(
+    editingProduct?.product_specs?.length
+      ? editingProduct.product_specs
+      : [{ l: 'Brand', v: '' }, { l: 'Model', v: '' }, { l: 'Warranty', v: '' }]
+  )
+  const [techSpecs, setTechSpecs] = useState<{ l: string; v: string }[]>(
+    editingProduct?.tech_specs?.length
+      ? editingProduct.tech_specs
+      : [{ l: '', v: '' }]
+  )
   const setSpec = (group: 'product' | 'tech', i: number, key: 'l' | 'v', val: string) => {
     if (group === 'product') {
       setProductSpecs(prev => { const a = [...prev]; a[i] = { ...a[i], [key]: val }; return a })
@@ -125,6 +135,10 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
           price_range_max:    priceMax,
           unit:               form.unit.trim() || null,
           tags,
+          tiered_pricing:     tieredPricing,
+          variations,
+          product_specs:      productSpecs,
+          tech_specs:         techSpecs,
           is_active:          true,
         })
         if (err) { setError(err.message); return }
@@ -140,6 +154,10 @@ export function ProductFormScreen({ goTo, mode = 'add', editingProduct, isProMem
           price_range_max:    priceMax,
           unit:               form.unit.trim() || null,
           tags,
+          tiered_pricing:     tieredPricing,
+          variations,
+          product_specs:      productSpecs,
+          tech_specs:         techSpecs,
         }).eq('id', editingProduct.id)
         if (err) { setError(err.message); return }
       }
