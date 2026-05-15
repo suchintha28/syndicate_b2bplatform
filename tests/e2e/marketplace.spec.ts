@@ -56,8 +56,8 @@ test.describe('Explore / Listing screen', () => {
   })
 
   test('category filter options are visible', async ({ page }) => {
-    // Categories like "Manufacturing", "Technology", etc. should appear as filter chips
-    const categoryFilter = page.locator('button:has-text("All"), button:has-text("Manufacturing"), button:has-text("Technology")').first()
+    // Explore screen default filter label is "All Industries"
+    const categoryFilter = page.locator('button:has-text("All Industries"), button:has-text("Manufacturing"), button:has-text("All")').first()
     await expect(categoryFilter).toBeVisible({ timeout: 5000 })
   })
 
@@ -97,8 +97,9 @@ test.describe('RFQs screen — Browse tab (guest accessible)', () => {
     await expect(errorText).toHaveCount(0)
   })
 
-  test('a "Browse" tab or heading is visible', async ({ page }) => {
-    const browseEl = page.locator('button:has-text("Browse"), text=/browse|open requests/i').first()
+  test('an "Open requests" tab or heading is visible', async ({ page }) => {
+    // The RFQs screen Browse tab label is "Open requests"
+    const browseEl = page.locator('button:has-text("Open requests"), text=/open requests|browse rfqs/i').first()
     await expect(browseEl).toBeVisible({ timeout: 5000 })
   })
 

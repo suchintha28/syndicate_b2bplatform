@@ -58,36 +58,37 @@ test.describe('Mobile navigation (375px viewport)', () => {
   })
 
   test('the bottom navigation bar is visible on mobile', async ({ page }) => {
-    // Mobile bottom nav should be present
-    const bottomNav = page.locator('nav').last()
+    // BottomNav renders as <nav class="botnav">
+    const bottomNav = page.locator('nav.botnav')
     await expect(bottomNav).toBeVisible()
   })
 
   test('Home tab is visible and clickable on mobile', async ({ page }) => {
-    const homeTab = page.locator('nav a, nav button').filter({ hasText: /home/i }).first()
+    // Target .botnav specifically to avoid matching the hidden TopNav
+    const homeTab = page.locator('nav.botnav button').filter({ hasText: /home/i }).first()
     await expect(homeTab).toBeVisible()
     await expect(homeTab).toBeEnabled()
   })
 
   test('Explore tab is visible and clickable on mobile', async ({ page }) => {
-    const exploreTab = page.locator('nav a, nav button').filter({ hasText: /explore/i }).first()
+    const exploreTab = page.locator('nav.botnav button').filter({ hasText: /explore/i }).first()
     await expect(exploreTab).toBeVisible()
     await expect(exploreTab).toBeEnabled()
   })
 
   test('RFQs tab is visible and clickable on mobile', async ({ page }) => {
-    const rfqTab = page.locator('nav a, nav button').filter({ hasText: /rfq/i }).first()
+    const rfqTab = page.locator('nav.botnav button').filter({ hasText: /rfq/i }).first()
     await expect(rfqTab).toBeVisible()
     await expect(rfqTab).toBeEnabled()
   })
 
-  test('Profile/Account tab is visible on mobile', async ({ page }) => {
-    const profileTab = page.locator('nav a, nav button').filter({ hasText: /profile|account/i }).first()
+  test('Profile tab is visible on mobile', async ({ page }) => {
+    const profileTab = page.locator('nav.botnav button').filter({ hasText: /profile/i }).first()
     await expect(profileTab).toBeVisible()
   })
 
   test('no nav items overflow off screen on mobile', async ({ page }) => {
-    const nav = page.locator('nav').last()
+    const nav = page.locator('nav.botnav')
     const navBox = await nav.boundingBox()
     if (navBox) {
       expect(navBox.width).toBeLessThanOrEqual(375)

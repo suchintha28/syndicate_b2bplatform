@@ -23,8 +23,9 @@ test.describe('Registration page (/register)', () => {
   })
 
   test('full name input field is present', async ({ page }) => {
+    // Register page uses placeholder="Jane Doe" for the full name field
     await expect(
-      page.locator('input[name="fullName"], input[placeholder*="name" i], input[id*="name" i]').first(),
+      page.locator('input[placeholder="Jane Doe"], input[placeholder*="name" i], input[autocomplete="name"]').first(),
     ).toBeVisible()
   })
 
