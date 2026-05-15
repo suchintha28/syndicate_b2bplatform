@@ -7,6 +7,6 @@ export default defineCliConfig({
   },
   studioHost: 'syndicate-cms',  // → https://syndicate-cms.sanity.studio
   deployment: {
-    appId: 'mnftj2rmgcde3cq73p40jwhg',
+    appId: 'mnftj2rmgcde3cq73p40jwhg',  // registered under project mx1vcbbk
   },
 })
