@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { dbBrandToBusiness, dbProductToProduct } from '@/lib/supabase/queries'
 import { CATEGORIES, LOCATIONS, PRICE_RANGES, RATING_FILTERS, type Business, type Product, type NavOpts } from '@/lib/data'
 import type { CommonProps } from './_shared'
+import { MarketingBanner } from '@/components/MarketingBanner'
 
 export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, favorites, toggleFavorite, initialFilter, cardStyle }: CommonProps & { initialFilter: NavOpts | null }) {
   const [searchQuery, setSearchQuery] = useState('')
@@ -92,6 +93,8 @@ export function ExploreScreen({ goTo, setSelectedBusiness, setSelectedProduct, f
           ]} />
         }
       />
+
+      <MarketingBanner slot="explore_heading" />
 
       <div className="layout-explore">
         {/* Sidebar */}

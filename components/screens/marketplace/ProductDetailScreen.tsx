@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { Icon } from '@/components/icons'
 import { Button, Badge, Avatar, Stars, BackLink, VerifiedMark } from '@/components/ui'
 import { type Business, type Product, type Screen, type NavOpts } from '@/lib/data'
+import { MarketingBanner } from '@/components/MarketingBanner'
 
 const STAR_LABELS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent']
 
@@ -197,6 +198,8 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
           )}
         </div>
       </div>
+
+      <MarketingBanner slot="product_gallery" />
 
       {/* ── Specifications ── */}
       <div className="card" style={{ padding: 24, marginTop: 32 }}>

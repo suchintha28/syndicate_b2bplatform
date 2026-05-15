@@ -6,6 +6,7 @@ import { Button, Badge, Avatar, Stars, SkeletonCard, EmptyState } from '@/compon
 import { ProductCard } from '@/components/cards'
 import { REVIEWS, type Business, type Product, type Screen, type NavOpts } from '@/lib/data'
 import { useBrandProducts } from '@/hooks/useBrandProducts'
+import { MarketingBanner } from '@/components/MarketingBanner'
 
 export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favorites, toggleFavorite, cardStyle, isSignedIn = false }: {
   business: Business | null
@@ -88,6 +89,8 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
               <p className="text-ink2 text-base" style={{ lineHeight: 1.6 }}>{business.description}</p>
             </div>
           </section>
+
+          <MarketingBanner slot="brand_about" margin="0 0 32px" />
 
           {/* Products */}
           <section className="section">

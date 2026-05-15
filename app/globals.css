@@ -707,6 +707,44 @@ textarea.field { min-height: 120px; resize: vertical; }
 .spec-row input:focus { outline: 2px solid var(--primary); outline-offset: -1px; border-color: var(--primary); }
 
 /* ============================================
+   Marketing banners (CMS-managed)
+   ============================================ */
+.marketing-banner {
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  padding: 22px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-height: 80px;
+  position: relative;
+}
+.marketing-banner-text { flex: 1; min-width: 0; }
+.marketing-banner-title {
+  font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+  font-weight: 700;
+  font-size: 18px;
+  line-height: 1.25;
+}
+.marketing-banner-subtitle { font-size: 13px; opacity: 0.82; margin-top: 4px; line-height: 1.4; }
+.marketing-banner-cta {
+  flex-shrink: 0;
+  padding: 9px 20px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.38);
+  border-radius: var(--r-sm);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+a:hover .marketing-banner-cta { background: rgba(255,255,255,0.28); }
+
+/* ============================================
    Product detail grid layout
    ============================================ */
 @media (min-width: 900px) {

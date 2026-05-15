@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client'
 import { dbBrandToBusiness, dbProductToProduct } from '@/lib/supabase/queries'
 import { CATEGORIES, type Business, type Product } from '@/lib/data'
 import type { CommonProps } from './_shared'
+import { MarketingBanner } from '@/components/MarketingBanner'
 
 export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favorites, toggleFavorite, recentlyViewedBrands, cardStyle }: CommonProps & { recentlyViewedBrands: Business[] }) {
   const [featuredBrands, setFeaturedBrands] = useState<Business[]>([])
@@ -62,6 +63,8 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
           </div>
         </div>
       </section>
+
+      <MarketingBanner slot="home_hero" />
 
       {/* Categories */}
       <section className="section">
