@@ -58,17 +58,17 @@ test.describe('Buyer explores supplier listings', () => {
   })
 
   test('explore page loads supplier cards', async ({ page }) => {
-    // Scope to inner results <main> — the sidebar also has <div class="card">
+    // locator.isVisible() is immediate — use waitFor() to actually wait for data
     const card       = page.locator('main').last().locator('article.card').first()
     const emptyState = page.locator('text=/no suppliers|no results|be the first/i').first()
-    const hasCard    = await card.isVisible({ timeout: 8_000 }).catch(() => false)
-    const hasEmpty   = await emptyState.isVisible({ timeout: 3_000 }).catch(() => false)
+    const hasCard    = await card.waitFor({ timeout: 10_000 }).then(() => true).catch(() => false)
+    const hasEmpty   = await emptyState.waitFor({ timeout: 3_000 }).then(() => true).catch(() => false)
     expect(hasCard || hasEmpty).toBe(true)
   })
 
   test('buyer can click a supplier card and view their profile page', async ({ page }) => {
     const card = page.locator('main').last().locator('article.card').first()
-    const hasCard = await card.isVisible({ timeout: 8_000 }).catch(() => false)
+    const hasCard = await card.waitFor({ timeout: 10_000 }).then(() => true).catch(() => false)
 
     if (!hasCard) {
       test.skip(true, 'No supplier cards in DB — skipping')

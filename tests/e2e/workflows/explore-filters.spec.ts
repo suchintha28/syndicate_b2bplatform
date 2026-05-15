@@ -41,12 +41,15 @@ const SEL = {
   activeChip:   '[class*="chip"], [class*="filter-chip"], [class*="active-filter"]',
 }
 
-// Count only supplier result cards scoped to the inner results <main>.
-// ExploreScreen renders: outer <main> > <aside><div class="card"> (sidebar)
-//                                   > <main> <article class="card ..."> (results)
-// Using `main.last()` targets the inner results <main>; `article.card` matches
-// only <article> supplier cards, not the sidebar <div class="card">.
+// Count supplier result cards in the inner results <main>.
+// IMPORTANT: locator.count() is immediate — it does not wait for async renders.
+// We first wait for either a card or an empty-state to appear (data loaded),
+// then snapshot the count. This prevents "0 before filter, 1 after" races.
 async function countResultCards(page: import('@playwright/test').Page): Promise<number> {
+  await Promise.race([
+    page.locator('article.card').first().waitFor({ timeout: 10_000 }),
+    page.locator('text=/no suppliers|no results/i').first().waitFor({ timeout: 10_000 }),
+  ]).catch(() => { /* DB may be empty — proceed with count=0 */ })
   return page.locator('main').last().locator('article.card').count()
 }
 

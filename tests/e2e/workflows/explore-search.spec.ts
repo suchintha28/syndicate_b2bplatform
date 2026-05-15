@@ -17,7 +17,12 @@ import { test, expect } from '@playwright/test'
  */
 
 // Returns count of supplier result cards, scoped to the results area only.
+// Waits for data to load first — locator.count() is immediate, not async-aware.
 async function countResultCards(page: import('@playwright/test').Page): Promise<number> {
+  await Promise.race([
+    page.locator('article.card').first().waitFor({ timeout: 10_000 }),
+    page.locator('text=/no suppliers|no results/i').first().waitFor({ timeout: 10_000 }),
+  ]).catch(() => { /* DB may be empty — proceed with count=0 */ })
   return page.locator('main').last().locator('article.card').count()
 }
 
