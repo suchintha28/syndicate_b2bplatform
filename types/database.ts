@@ -121,6 +121,20 @@ export interface DbNotification {
   created_at: string
 }
 
+export interface DbReview {
+  id: string
+  reviewer_id: string
+  target_type: 'product' | 'brand'
+  target_id: string
+  rating: number
+  title: string | null
+  body: string
+  photos: string[]
+  created_at: string
+  // joined via select('*, profiles(...)')
+  profiles?: { full_name: string; business_name: string | null; avatar_url: string | null } | null
+}
+
 export interface DbRfqResponse {
   id: string
   rfq_id: string

@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Icon } from '@/components/icons'
 import { Button, Badge, Avatar, Stars, BackLink, VerifiedMark } from '@/components/ui'
 import { type Business, type Product, type Screen, type NavOpts } from '@/lib/data'
 import { MarketingBanner } from '@/components/MarketingBanner'
+import { createClient } from '@/lib/supabase/client'
+import type { DbReview } from '@/types/database'
 
 const STAR_LABELS = ['', 'Poor', 'Fair', 'Good', 'Very good', 'Excellent']
 
@@ -31,7 +33,26 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
   const [revForm, setRevForm] = useState({ rating: 0, title: '', text: '' })
   const [revHover, setRevHover] = useState(0)
   const [revPhotos, setRevPhotos] = useState<string[]>([])
-  const [productReviews, setProductReviews] = useState<Array<{ initials: string; name: string; company: string; rating: number; time: string; text: string; photos?: string[] }>>([])
+  const [productReviews, setProductReviews] = useState<DbReview[]>([])
+  const [revLoading, setRevLoading] = useState(true)
+  const [revSubmitting, setRevSubmitting] = useState(false)
+  const [revError, setRevError] = useState('')
+
+  const loadReviews = useCallback(async () => {
+    if (!product?.id) return
+    setRevLoading(true)
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('reviews')
+      .select('*, profiles(full_name, business_name, avatar_url)')
+      .eq('target_type', 'product')
+      .eq('target_id', product.id)
+      .order('created_at', { ascending: false })
+    setProductReviews((data as DbReview[]) ?? [])
+    setRevLoading(false)
+  }, [product?.id])
+
+  useEffect(() => { loadReviews() }, [loadReviews])
 
   if (!product) return null
 
@@ -304,42 +325,69 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
                 </div>
               </div>
 
+              {revError && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{revError}</p>}
               <div className="flex gap-3">
                 <Button variant="secondary" onClick={() => setShowRevModal(false)}>Cancel</Button>
-                <Button variant="primary" block icon="check" onClick={() => {
+                <Button variant="primary" block icon="check" disabled={revSubmitting} onClick={async () => {
                   if (!revForm.rating || !revForm.text.trim()) return
-                  setProductReviews(prev => [{ initials: 'ME', name: 'You', company: 'Your company', rating: revForm.rating, time: 'Just now', text: revForm.text, photos: [...revPhotos] }, ...prev])
+                  setRevError('')
+                  setRevSubmitting(true)
+                  const supabase = createClient()
+                  const { data: { user } } = await supabase.auth.getUser()
+                  if (!user) { setRevError('You must be signed in.'); setRevSubmitting(false); return }
+                  const { error } = await supabase.from('reviews').upsert({
+                    reviewer_id: user.id,
+                    target_type: 'product',
+                    target_id:   product!.id,
+                    rating:      revForm.rating,
+                    title:       revForm.title.trim() || null,
+                    body:        revForm.text.trim(),
+                    photos:      revPhotos,
+                  }, { onConflict: 'reviewer_id,target_type,target_id' })
+                  setRevSubmitting(false)
+                  if (error) { setRevError(error.message); return }
                   setRevForm({ rating: 0, title: '', text: '' })
                   setRevPhotos([])
                   setShowRevModal(false)
+                  loadReviews()
                 }}>Post review</Button>
               </div>
             </div>
           </div>
         )}
 
-        {productReviews.length === 0 ? (
+        {revLoading ? (
+          <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+            <div className="text-muted text-sm">Loading reviews…</div>
+          </div>
+        ) : productReviews.length === 0 ? (
           <div className="card" style={{ padding: 32, textAlign: 'center' }}>
             <div className="text-muted text-sm">No reviews yet. Be the first to review this product.</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {productReviews.map((r, i) => (
-              <div key={i} className="card" style={{ padding: 'var(--card-pad)' }}>
+            {productReviews.map((r) => {
+              const fullName = r.profiles?.full_name ?? 'Anonymous'
+              const company  = r.profiles?.business_name ?? ''
+              const initials = fullName.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
+              const timeStr  = new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+              return (
+              <div key={r.id} className="card" style={{ padding: 'var(--card-pad)' }}>
                 <div className="flex items-start gap-3 mb-3">
-                  <Avatar initials={r.initials} size="md" />
+                  <Avatar initials={initials} size="md" />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-display font-semibold">{r.name}</span>
-                      <span className="text-xs text-muted">· {r.company}</span>
+                      <span className="font-display font-semibold">{fullName}</span>
+                      {company && <span className="text-xs text-muted">· {company}</span>}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <Stars rating={r.rating} />
-                      <span className="text-xs text-muted font-mono">{r.time}</span>
+                      <span className="text-xs text-muted font-mono">{timeStr}</span>
                     </div>
                   </div>
                 </div>
-                <p className="text-sm text-ink2" style={{ lineHeight: 1.55 }}>{r.text}</p>
+                {r.title && <p className="font-semibold text-sm mb-1">{r.title}</p>}
+                <p className="text-sm text-ink2" style={{ lineHeight: 1.55 }}>{r.body}</p>
                 {r.photos && r.photos.length > 0 && (
                   <div className="review-card-photos">
                     {r.photos.map((src, pi) => (
@@ -350,7 +398,8 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
                   </div>
                 )}
               </div>
-            ))}
+            )
+            })}
           </div>
         )}
       </div>

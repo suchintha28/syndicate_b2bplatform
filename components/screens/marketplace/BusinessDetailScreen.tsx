@@ -1,12 +1,14 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Icon } from '@/components/icons'
 import { Button, Badge, Avatar, Stars, SkeletonCard, EmptyState } from '@/components/ui'
 import { ProductCard } from '@/components/cards'
-import { REVIEWS, type Business, type Product, type Screen, type NavOpts } from '@/lib/data'
+import { type Business, type Product, type Screen, type NavOpts } from '@/lib/data'
 import { useBrandProducts } from '@/hooks/useBrandProducts'
 import { MarketingBanner } from '@/components/MarketingBanner'
+import { createClient } from '@/lib/supabase/client'
+import type { DbReview } from '@/types/database'
 
 export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favorites, toggleFavorite, cardStyle, isSignedIn = false }: {
   business: Business | null
@@ -19,9 +21,28 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
 }) {
   const { products: brandProducts, loading: productsLoading } = useBrandProducts(business?.id)
   const [showReviewModal, setShowReviewModal] = useState(false)
-  const [extraReviews, setExtraReviews] = useState<typeof REVIEWS>([])
+  const [reviews, setReviews] = useState<DbReview[]>([])
+  const [revLoading, setRevLoading] = useState(true)
+  const [revSubmitting, setRevSubmitting] = useState(false)
+  const [revError, setRevError] = useState('')
   const [reviewForm, setReviewForm] = useState({ rating: 0, title: '', text: '' })
   const [hoverStar, setHoverStar] = useState(0)
+
+  const loadReviews = useCallback(async () => {
+    if (!business?.id) return
+    setRevLoading(true)
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('reviews')
+      .select('*, profiles(full_name, business_name, avatar_url)')
+      .eq('target_type', 'brand')
+      .eq('target_id', business.id)
+      .order('created_at', { ascending: false })
+    setReviews((data as DbReview[]) ?? [])
+    setRevLoading(false)
+  }, [business?.id])
+
+  useEffect(() => { loadReviews() }, [loadReviews])
 
   if (!business) return null
   const favorited = favorites.includes(business.id)
@@ -159,39 +180,73 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
                       onChange={e => setReviewForm(f => ({ ...f, text: e.target.value }))} style={{ resize: 'vertical' }} />
                   </div>
 
+                  {revError && <p style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{revError}</p>}
                   <div className="flex gap-3">
                     <Button variant="secondary" onClick={() => setShowReviewModal(false)}>Cancel</Button>
-                    <Button variant="primary" block icon="check" onClick={() => {
+                    <Button variant="primary" block icon="check" disabled={revSubmitting} onClick={async () => {
                       if (!reviewForm.rating || !reviewForm.text.trim()) return
-                      setExtraReviews(prev => [{ initials: 'ME', name: 'You', company: 'Your company', rating: reviewForm.rating, time: 'Just now', text: reviewForm.text }, ...prev])
+                      setRevError('')
+                      setRevSubmitting(true)
+                      const supabase = createClient()
+                      const { data: { user } } = await supabase.auth.getUser()
+                      if (!user) { setRevError('You must be signed in.'); setRevSubmitting(false); return }
+                      const { error } = await supabase.from('reviews').upsert({
+                        reviewer_id: user.id,
+                        target_type: 'brand',
+                        target_id:   business!.id,
+                        rating:      reviewForm.rating,
+                        title:       reviewForm.title.trim() || null,
+                        body:        reviewForm.text.trim(),
+                        photos:      [],
+                      }, { onConflict: 'reviewer_id,target_type,target_id' })
+                      setRevSubmitting(false)
+                      if (error) { setRevError(error.message); return }
                       setReviewForm({ rating: 0, title: '', text: '' })
                       setShowReviewModal(false)
+                      loadReviews()
                     }}>Post review</Button>
                   </div>
                 </div>
               </div>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[...extraReviews, ...REVIEWS].map((r, i) => (
-                <div key={i} className="card" style={{ padding: 'var(--card-pad)' }}>
-                  <div className="flex items-start gap-3 mb-3">
-                    <Avatar initials={r.initials} size="md" />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-display font-semibold">{r.name}</span>
-                        <span className="text-xs text-muted">· {r.company}</span>
+            {revLoading ? (
+              <div className="card" style={{ padding: 24, textAlign: 'center' }}>
+                <div className="text-muted text-sm">Loading reviews…</div>
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="card" style={{ padding: 24, textAlign: 'center' }}>
+                <div className="text-muted text-sm">No reviews yet. Be the first to review this supplier.</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {reviews.map((r) => {
+                  const fullName = r.profiles?.full_name ?? 'Anonymous'
+                  const company  = r.profiles?.business_name ?? ''
+                  const initials = fullName.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?'
+                  const timeStr  = new Date(r.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                  return (
+                    <div key={r.id} className="card" style={{ padding: 'var(--card-pad)' }}>
+                      <div className="flex items-start gap-3 mb-3">
+                        <Avatar initials={initials} size="md" />
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-display font-semibold">{fullName}</span>
+                            {company && <span className="text-xs text-muted">· {company}</span>}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Stars rating={r.rating} />
+                            <span className="text-xs text-muted font-mono">{timeStr}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Stars rating={r.rating} />
-                        <span className="text-xs text-muted font-mono">{r.time}</span>
-                      </div>
+                      {r.title && <p className="font-semibold text-sm mb-1">{r.title}</p>}
+                      <p className="text-sm text-ink2" style={{ lineHeight: 1.55 }}>{r.body}</p>
                     </div>
-                  </div>
-                  <p className="text-sm text-ink2" style={{ lineHeight: 1.55 }}>{r.text}</p>
-                </div>
-              ))}
-            </div>
+                  )
+                })}
+              </div>
+            )}
           </section>
 
           {/* CTA */}
