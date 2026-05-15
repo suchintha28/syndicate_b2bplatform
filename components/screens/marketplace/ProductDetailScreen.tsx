@@ -56,11 +56,13 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
 
   if (!product) return null
 
-  // Build gallery items from product image + extra seeds
-  const galleryItems = [
-    { type: 'image', src: product.image },
-    { type: 'image', src: `https://images.unsplash.com/photo-1581094794329-c8112a89af12?auto=format&fit=crop&w=800&q=80` },
-    { type: 'image', src: `https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80` },
+  // Build gallery from the product's real images array, falling back to the
+  // single image field. Filter out empty strings to avoid broken img tags.
+  const realImages = (product.images && product.images.length > 0)
+    ? product.images.filter(Boolean)
+    : (product.image ? [product.image] : [])
+  const galleryItems: { type: string; src: string }[] = [
+    ...realImages.map(src => ({ type: 'image', src })),
     ...(product.videoUrl ? [{ type: 'video', src: product.videoUrl }] : []),
   ]
   const currentItem = galleryItems[galleryIdx] ?? galleryItems[0]
@@ -89,11 +91,9 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
   ]
 
   const handleRevPhotoAdd = () => {
-    // Simulate picking a photo (use a placeholder)
+    // Photo upload is handled server-side; this button is a placeholder UI until
+    // file-upload is wired. For now it is intentionally a no-op.
     if (revPhotos.length >= 2) return
-    const idx = revPhotos.length
-    const seeds = ['photo-1518770660439-4636190af475', 'photo-1581090700227-1e37b190418e']
-    setRevPhotos(p => [...p, `https://images.unsplash.com/${seeds[idx]}?auto=format&fit=crop&w=400&q=80`])
   }
 
   return (
@@ -112,7 +112,7 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
         <div className="gallery">
           <div className="gallery-main">
             <img src={currentItem.src} alt={product.name}
-              onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/p${product.id}/800/600` }} />
+              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
             {galleryItems.length > 1 && (
               <>
                 <button className="gallery-nav prev" onClick={() => setGalleryIdx(i => (i - 1 + galleryItems.length) % galleryItems.length)}>
@@ -129,7 +129,7 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
             <div className="gallery-thumbs">
               {galleryItems.map((item, i) => (
                 <button key={i} className={`gallery-thumb ${i === galleryIdx ? 'active' : ''}`} onClick={() => setGalleryIdx(i)}>
-                  <img src={item.src} alt="" onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/thumb${i}/200/200` }} />
+                  <img src={item.src} alt="" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                   {item.type === 'video' && (
                     <span className="gallery-thumb-badge"><Icon name="play" size={14} stroke="white" /></span>
                   )}

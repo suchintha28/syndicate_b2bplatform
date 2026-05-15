@@ -18,14 +18,16 @@ interface BusinessCardProps {
 export function BusinessCard({ business, cardStyle = 'bordered', favorited, onFavorite, onNavigate, onMessage }: BusinessCardProps) {
   return (
     <article className={`card card-hover card-style-${cardStyle} fade-up`} style={{ display: 'flex', flexDirection: 'column' }}>
-      <div className="img-wrap" style={{ aspectRatio: '16/10', position: 'relative' }}>
-        <img
-          src={business.cover}
-          alt={business.name}
-          className="img-cover"
-          loading="lazy"
-          onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${business.id}/600/375` }}
-        />
+      <div className="img-wrap" style={{ aspectRatio: '16/10', position: 'relative', background: 'var(--bg-alt)' }}>
+        {business.cover && (
+          <img
+            src={business.cover}
+            alt={business.name}
+            className="img-cover"
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          />
+        )}
         <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', gap: 6, flexWrap: 'wrap', maxWidth: 'calc(100% - 60px)' }}>
           {business.featured && <Badge variant="pro" icon="sparkle">Featured</Badge>}
           <Badge variant="neutral">{business.category}</Badge>
@@ -74,14 +76,16 @@ interface ProductCardProps {
 export function ProductCard({ product, business, cardStyle = 'bordered', onClick }: ProductCardProps) {
   return (
     <article className={`card card-hover card-style-${cardStyle} fade-up`} onClick={onClick} style={{ cursor: 'pointer' }}>
-      <div className="img-wrap" style={{ aspectRatio: '4/3', position: 'relative' }}>
-        <img
-          src={product.image}
-          alt={product.name}
-          className="img-cover"
-          loading="lazy"
-          onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/p${product.id}/400/300` }}
-        />
+      <div className="img-wrap" style={{ aspectRatio: '4/3', position: 'relative', background: 'var(--bg-alt)' }}>
+        {product.image && (
+          <img
+            src={product.image}
+            alt={product.name}
+            className="img-cover"
+            loading="lazy"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+          />
+        )}
         <div style={{ position: 'absolute', top: 10, left: 10, display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
           {product.tieredPricing && product.tieredPricing.length > 1 && <Badge variant="verified">Bulk pricing</Badge>}
           {product.directSales && <Badge variant="success" icon="zap">Buy now</Badge>}

@@ -110,6 +110,7 @@ export interface Product {
   sales: number
   variations: ProductVariation[]
   tieredPricing: PriceTier[]
+  images?: string[]
   videoUrl: string
   directSales: boolean
   description: string

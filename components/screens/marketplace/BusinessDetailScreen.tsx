@@ -49,15 +49,19 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
 
   return (
     <div className="fade-up">
-      {/* Cover */}
-      <div style={{ position: 'relative', height: 280, overflow: 'hidden' }}>
-        <img src={business.cover} alt="" className="img-cover"
-          onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${business.id}/1600/600` }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)' }} />
-      </div>
+      {/* Cover — only rendered when a cover image has been uploaded */}
+      {business.cover ? (
+        <div style={{ position: 'relative', height: 280, overflow: 'hidden' }}>
+          <img src={business.cover} alt="" className="img-cover"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)' }} />
+        </div>
+      ) : (
+        <div style={{ height: 120, background: 'var(--bg-alt)' }} />
+      )}
 
-      <div className="container" style={{ marginTop: -64, position: 'relative', zIndex: 2 }}>
-        <button className="back-link" onClick={() => goTo('listing')} style={{ color: 'white', marginBottom: 12 }}>
+      <div className="container" style={{ marginTop: business.cover ? -64 : 0, position: 'relative', zIndex: 2 }}>
+        <button className="back-link" onClick={() => goTo('listing')} style={{ color: business.cover ? 'white' : 'var(--ink)', marginBottom: 12 }}>
           <Icon name="chevron-left" size={14} strokeWidth={2.5} /> Back to explore
         </button>
 

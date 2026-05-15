@@ -29,17 +29,8 @@ export default async function BrandPage({ params }: { params: { slug: string } }
     ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
     : brand.name.slice(0, 2).toUpperCase()
 
-  const IMG = (id: string) => `https://images.unsplash.com/${id}?auto=format&fit=crop&w=1200&q=80`
-  const CATEGORY_COVERS: Record<string, string> = {
-    Manufacturing: IMG('photo-1565793298831-09f04bb2ce80'),
-    Technology:    IMG('photo-1518770660439-4636190af475'),
-    Construction:  IMG('photo-1503387762-592deb58ef4e'),
-    Logistics:     IMG('photo-1601584115197-04ecc0da31d7'),
-    'Food & Bev':  IMG('photo-1495474472287-4d71bcdd2085'),
-    Services:      IMG('photo-1556761175-5973dc0f32e7'),
-  }
   const primaryCategory = brand.categories[0] || 'Services'
-  const coverUrl = brand.cover_image_url || CATEGORY_COVERS[primaryCategory] || IMG('photo-1556761175-5973dc0f32e7')
+  const coverUrl = brand.cover_image_url || ''
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
@@ -53,13 +44,17 @@ export default async function BrandPage({ params }: { params: { slug: string } }
         <Link href="/" className="btn btn-secondary btn-sm">← Marketplace</Link>
       </nav>
 
-      {/* Cover */}
-      <div style={{ position: 'relative', height: 300, overflow: 'hidden' }}>
-        <img src={coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 100%)' }} />
-      </div>
+      {/* Cover — only shown when a cover image has been uploaded */}
+      {coverUrl ? (
+        <div style={{ position: 'relative', height: 300, overflow: 'hidden' }}>
+          <img src={coverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.55) 100%)' }} />
+        </div>
+      ) : (
+        <div style={{ height: 40, background: 'var(--bg)' }} />
+      )}
 
-      <div className="container" style={{ maxWidth: 900, marginTop: -72, position: 'relative', zIndex: 2, paddingBottom: 80 }}>
+      <div className="container" style={{ maxWidth: 900, marginTop: coverUrl ? -72 : 0, position: 'relative', zIndex: 2, paddingBottom: 80 }}>
         {/* Brand header card */}
         <div className="card" style={{ padding: 28, marginBottom: 24 }}>
           <div className="flex items-start gap-5 flex-wrap" style={{ marginBottom: 24 }}>
@@ -156,12 +151,14 @@ export default async function BrandPage({ params }: { params: { slug: string } }
               {dbProducts.map(p => {
                 const priceMin = p.price_range_min
                 const priceLabel = priceMin ? `LKR ${Math.round(priceMin).toLocaleString()}` : 'Contact for price'
-                const imgSrc = p.images[0] || `https://picsum.photos/seed/${p.id}/400/300`
+                const imgSrc = p.images[0] || ''
                 return (
                   <Link key={p.id} href={`/products/${p.slug}`} className="card card-hover" style={{ display: 'block', overflow: 'hidden' }}>
                     <div style={{ aspectRatio: '4/3', overflow: 'hidden', background: 'var(--bg-alt)' }}>
-                      <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onError={(e) => { (e.target as HTMLImageElement).src = `https://picsum.photos/seed/${p.id}/400/300` }} />
+                      {imgSrc && (
+                        <img src={imgSrc} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                      )}
                     </div>
                     <div style={{ padding: 16 }}>
                       <span className="badge badge-neutral" style={{ marginBottom: 8, display: 'inline-block' }}>{p.category}</span>

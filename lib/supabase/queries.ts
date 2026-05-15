@@ -1,19 +1,6 @@
 import type { DbBrand, DbProduct } from '@/types/database'
 import type { Business, Product } from '@/lib/data'
 
-const IMG = (id: string, w = 800) =>
-  `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`
-
-const CATEGORY_COVERS: Record<string, string> = {
-  Manufacturing: IMG('photo-1565793298831-09f04bb2ce80'),
-  Technology:    IMG('photo-1518770660439-4636190af475'),
-  Construction:  IMG('photo-1503387762-592deb58ef4e'),
-  Logistics:     IMG('photo-1601584115197-04ecc0da31d7'),
-  'Food & Bev':  IMG('photo-1495474472287-4d71bcdd2085'),
-  Services:      IMG('photo-1556761175-5973dc0f32e7'),
-}
-const DEFAULT_COVER = IMG('photo-1556761175-5973dc0f32e7')
-
 export function dbBrandToBusiness(brand: DbBrand): Business {
   const parts = brand.name.trim().split(/\s+/).filter(Boolean)
   const initials = parts.length >= 2
@@ -37,7 +24,7 @@ export function dbBrandToBusiness(brand: DbBrand): Business {
     priceRange: '$$',
     founded: new Date(brand.created_at).getFullYear(),
     employees: '10-50',
-    cover: brand.cover_image_url || CATEGORY_COVERS[primaryCategory] || DEFAULT_COVER,
+    cover: brand.cover_image_url || '',
     logoUrl: brand.logo_url || undefined,
   }
 }
@@ -53,7 +40,8 @@ export function dbProductToProduct(product: DbProduct): Product {
     slug: product.slug,
     name: product.name,
     price: priceFormatted,
-    image: (product.images ?? [])[0] || `https://picsum.photos/seed/${product.id}/400/300`,
+    image: (product.images ?? [])[0] || '',
+    images: (product.images ?? []).filter(Boolean),
     category: product.category,
     businessId: product.brand_id,
     status: 'Active' as const,

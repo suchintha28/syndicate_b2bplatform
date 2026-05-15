@@ -32,7 +32,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
 
   const images = product.images ?? []
   const tags = product.tags ?? []
-  const imgSrc = images[0] || `https://picsum.photos/seed/${product.id}/800/600`
+  const imgSrc = images[0] || ''
 
   const brandInitials = brand
     ? (() => {
@@ -64,7 +64,10 @@ export default async function ProductPage({ params }: { params: { slug: string }
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 32 }} className="product-detail-grid">
           {/* Image */}
           <div style={{ borderRadius: 'var(--r-lg)', overflow: 'hidden', aspectRatio: '4/3', background: 'var(--bg-alt)' }}>
-            <img src={imgSrc} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {imgSrc && (
+              <img src={imgSrc} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+            )}
           </div>
 
           {/* Details */}
