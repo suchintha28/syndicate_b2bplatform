@@ -84,6 +84,113 @@ test.describe('Explore / Listing screen', () => {
   })
 })
 
+test.describe('Supplier (brand) detail page', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    // Navigate to Explore, then open the first supplier card
+    await page.locator('nav a, nav button').filter({ hasText: /explore/i }).first().click()
+    await page.waitForTimeout(600)
+  })
+
+  test('opening a supplier card loads the brand detail page without an error', async ({ page }) => {
+    const card = page.locator('[class*="card"], [class*="Card"]').first()
+    const hasCard = await card.isVisible().catch(() => false)
+    if (!hasCard) {
+      test.skip(true, 'No supplier cards available to click')
+      return
+    }
+    await card.click()
+    await page.waitForTimeout(600)
+    const errorText = page.locator('text=/something went wrong|application error/i')
+    await expect(errorText).toHaveCount(0)
+  })
+
+  test('brand detail page shows a Reviews section', async ({ page }) => {
+    const card = page.locator('[class*="card"], [class*="Card"]').first()
+    const hasCard = await card.isVisible().catch(() => false)
+    if (!hasCard) {
+      test.skip(true, 'No supplier cards available to click')
+      return
+    }
+    await card.click()
+    await page.waitForTimeout(600)
+    const reviewsHeading = page.locator('text=/reviews/i').first()
+    await expect(reviewsHeading).toBeVisible({ timeout: 6000 })
+  })
+
+  test('"Write a review" button is visible on the brand detail page', async ({ page }) => {
+    const card = page.locator('[class*="card"], [class*="Card"]').first()
+    const hasCard = await card.isVisible().catch(() => false)
+    if (!hasCard) {
+      test.skip(true, 'No supplier cards available to click')
+      return
+    }
+    await card.click()
+    await page.waitForTimeout(600)
+    const writeReviewBtn = page.locator('button').filter({ hasText: /write a review/i }).first()
+    await expect(writeReviewBtn).toBeVisible({ timeout: 6000 })
+  })
+})
+
+test.describe('Product detail page', () => {
+  test('product detail page at /products/[slug] loads without a server error', async ({ page }) => {
+    // Navigate to Explore, open a supplier, then click a product
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await page.locator('nav a, nav button').filter({ hasText: /explore/i }).first().click()
+    await page.waitForTimeout(600)
+
+    const card = page.locator('[class*="card"], [class*="Card"]').first()
+    const hasCard = await card.isVisible().catch(() => false)
+    if (!hasCard) {
+      test.skip(true, 'No supplier cards to navigate through')
+      return
+    }
+    await card.click()
+    await page.waitForTimeout(600)
+
+    // Look for a product card or "View" link inside the supplier page
+    const productLink = page.locator('button, a').filter({ hasText: /view/i }).first()
+    const hasProduct = await productLink.isVisible().catch(() => false)
+    if (!hasProduct) {
+      test.skip(true, 'No products listed on this supplier page')
+      return
+    }
+    await productLink.click()
+    await page.waitForTimeout(800)
+
+    const errorText = page.locator('text=/something went wrong|application error|An error occurred/i')
+    await expect(errorText).toHaveCount(0)
+  })
+
+  test('product detail page shows a Customer reviews section', async ({ page }) => {
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+    await page.locator('nav a, nav button').filter({ hasText: /explore/i }).first().click()
+    await page.waitForTimeout(600)
+
+    const card = page.locator('[class*="card"], [class*="Card"]').first()
+    if (!await card.isVisible().catch(() => false)) {
+      test.skip(true, 'No supplier cards available')
+      return
+    }
+    await card.click()
+    await page.waitForTimeout(600)
+
+    const productLink = page.locator('button, a').filter({ hasText: /view/i }).first()
+    if (!await productLink.isVisible().catch(() => false)) {
+      test.skip(true, 'No products on this supplier page')
+      return
+    }
+    await productLink.click()
+    await page.waitForTimeout(800)
+
+    const reviewsSection = page.locator('text=/customer reviews/i').first()
+    await expect(reviewsSection).toBeVisible({ timeout: 6000 })
+  })
+})
+
 test.describe('RFQs screen — Browse tab (guest accessible)', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')

@@ -29,7 +29,7 @@ const VALID_BRAND: DbBrand = {
   updated_at: '2024-06-15T00:00:00Z',
 }
 
-// ─── Minimal valid DbProduct row ──────────────────────────────────────────────
+// ─── Minimal valid DbProduct row (all required fields including extended JSONB) ─
 const VALID_PRODUCT: DbProduct = {
   id: 'product-uuid-789',
   brand_id: 'brand-uuid-123',
@@ -44,6 +44,21 @@ const VALID_PRODUCT: DbProduct = {
   price_range_max: 52000,
   unit: 'units',
   tags: ['relay', 'automation'],
+  tiered_pricing: [
+    { min: 1,  max: 10,   price: 45000 },
+    { min: 11, max: null, price: 40000 },
+  ],
+  variations: [
+    { name: 'Standard', price: 45000 },
+    { name: 'Pro',      price: 52000 },
+  ],
+  product_specs: [
+    { l: 'Brand', v: 'Acme' },
+    { l: 'Model', v: 'SR-100' },
+  ],
+  tech_specs: [
+    { l: 'Voltage', v: '12V DC' },
+  ],
   is_active: true,
   created_at: '2024-06-01T00:00:00Z',
   updated_at: '2024-06-01T00:00:00Z',
@@ -166,7 +181,7 @@ describe('dbProductToProduct', () => {
   })
 
   it('shows "Contact for price" when price_range_min is null', () => {
-    const noPrice: DbProduct = { ...VALID_PRODUCT, price_range_min: null as unknown as number }
+    const noPrice: DbProduct = { ...VALID_PRODUCT, price_range_min: null }
     const result = dbProductToProduct(noPrice)
     expect(result.price).toBe('Contact for price')
   })
@@ -177,8 +192,81 @@ describe('dbProductToProduct', () => {
     expect(result.image).toContain('picsum.photos')
   })
 
+  it('falls back to picsum when images is null (DB default before migration)', () => {
+    const nullImages: DbProduct = { ...VALID_PRODUCT, images: null as unknown as string[] }
+    const result = dbProductToProduct(nullImages)
+    expect(result.image).toContain('picsum.photos')
+  })
+
   it('preserves the product description', () => {
     const result = dbProductToProduct(VALID_PRODUCT)
     expect(result.description).toBe('Industrial-grade relay for automation.')
+  })
+
+  // ── Extended fields (tiered pricing, variations, specs) ───────────────────
+
+  it('maps tiered_pricing rows to tieredPricing with correct min/max/price', () => {
+    const result = dbProductToProduct(VALID_PRODUCT)
+    expect(result.tieredPricing).toHaveLength(2)
+    expect(result.tieredPricing[0]).toMatchObject({ min: 1, max: 10, price: 45000 })
+    expect(result.tieredPricing[1]).toMatchObject({ min: 11, max: null, price: 40000 })
+  })
+
+  it('falls back to a single price_range_min tier when tiered_pricing is empty', () => {
+    const noTiers: DbProduct = { ...VALID_PRODUCT, tiered_pricing: [] }
+    const result = dbProductToProduct(noTiers)
+    expect(result.tieredPricing).toHaveLength(1)
+    expect(result.tieredPricing[0]).toMatchObject({ min: 1, max: null, price: 45000 })
+  })
+
+  it('returns empty tieredPricing when tiered_pricing is empty and no price set', () => {
+    const noTiersNoPrice: DbProduct = { ...VALID_PRODUCT, tiered_pricing: [], price_range_min: null }
+    const result = dbProductToProduct(noTiersNoPrice)
+    expect(result.tieredPricing).toHaveLength(0)
+  })
+
+  it('maps variations with name and numeric price', () => {
+    const result = dbProductToProduct(VALID_PRODUCT)
+    expect(result.variations).toHaveLength(2)
+    expect(result.variations[0]).toMatchObject({ name: 'Standard', price: 45000 })
+    expect(result.variations[1]).toMatchObject({ name: 'Pro',      price: 52000 })
+  })
+
+  it('returns empty variations array when variations is empty', () => {
+    const noVariations: DbProduct = { ...VALID_PRODUCT, variations: [] }
+    const result = dbProductToProduct(noVariations)
+    expect(result.variations).toHaveLength(0)
+  })
+
+  it('maps product_specs {l, v} to {label, value}', () => {
+    const result = dbProductToProduct(VALID_PRODUCT)
+    expect(result.productSpecs).toHaveLength(2)
+    expect(result.productSpecs![0]).toEqual({ label: 'Brand', value: 'Acme' })
+    expect(result.productSpecs![1]).toEqual({ label: 'Model', value: 'SR-100' })
+  })
+
+  it('maps tech_specs {l, v} to {label, value}', () => {
+    const result = dbProductToProduct(VALID_PRODUCT)
+    expect(result.techSpecs).toHaveLength(1)
+    expect(result.techSpecs![0]).toEqual({ label: 'Voltage', value: '12V DC' })
+  })
+
+  it('returns empty productSpecs when product_specs is empty', () => {
+    const noSpecs: DbProduct = { ...VALID_PRODUCT, product_specs: [] }
+    const result = dbProductToProduct(noSpecs)
+    expect(result.productSpecs).toHaveLength(0)
+  })
+
+  it('handles null tiered_pricing gracefully (pre-migration rows)', () => {
+    const nullTiers: DbProduct = { ...VALID_PRODUCT, tiered_pricing: null as unknown as [] }
+    const result = dbProductToProduct(nullTiers)
+    // Should not throw — falls back to price_range_min tier
+    expect(Array.isArray(result.tieredPricing)).toBe(true)
+  })
+
+  it('handles null variations gracefully (pre-migration rows)', () => {
+    const nullVars: DbProduct = { ...VALID_PRODUCT, variations: null as unknown as [] }
+    const result = dbProductToProduct(nullVars)
+    expect(Array.isArray(result.variations)).toBe(true)
   })
 })
