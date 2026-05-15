@@ -139,7 +139,8 @@ test.describe('Write a review (authenticated)', () => {
   })
 
   test('"Write a review" button opens the review modal on a brand page', async ({ page }) => {
-    const card = page.locator('[class*="card"], [class*="Card"]').first()
+    // Scope to inner results <main> with article.card to avoid the sidebar <div class="card">
+    const card = page.locator('main').last().locator('article.card').first()
     const hasCard = await card.isVisible({ timeout: 5000 }).catch(() => false)
 
     if (!hasCard) {
@@ -148,7 +149,7 @@ test.describe('Write a review (authenticated)', () => {
     }
 
     await card.click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const writeBtn = page.locator('button').filter({ hasText: /write a review/i }).first()
     await expect(writeBtn).toBeVisible({ timeout: 6000 })
@@ -163,7 +164,8 @@ test.describe('Write a review (authenticated)', () => {
   })
 
   test('submitting a review with rating + text posts without error', async ({ page }) => {
-    const card = page.locator('[class*="card"], [class*="Card"]').first()
+    // Scope to inner results <main> with article.card to avoid the sidebar <div class="card">
+    const card = page.locator('main').last().locator('article.card').first()
     const hasCard = await card.isVisible({ timeout: 5000 }).catch(() => false)
 
     if (!hasCard) {
@@ -172,7 +174,7 @@ test.describe('Write a review (authenticated)', () => {
     }
 
     await card.click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const writeBtn = page.locator('button').filter({ hasText: /write a review/i }).first()
     const hasWriteBtn = await writeBtn.isVisible({ timeout: 5000 }).catch(() => false)

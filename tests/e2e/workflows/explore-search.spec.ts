@@ -7,7 +7,19 @@ import { test, expect } from '@playwright/test'
  * screen. These run in the `chromium-authenticated` project (which starts
  * authenticated) but work equally well without a session because the
  * Explore screen is public.
+ *
+ * Selector rationale:
+ *   ExploreScreen DOM:  outer <main>
+ *                         <aside><div class="card"> (sidebar — NOT a supplier card)
+ *                         <main> <article class="card ..."> (results)
+ *   `page.locator('main').last()` targets the inner results <main>.
+ *   `article.card` matches only <article> supplier cards, excluding the sidebar.
  */
+
+// Returns count of supplier result cards, scoped to the results area only.
+async function countResultCards(page: import('@playwright/test').Page): Promise<number> {
+  return page.locator('main').last().locator('article.card').count()
+}
 
 test.describe('Explore search and filtering', () => {
   test.beforeEach(async ({ page }) => {
@@ -24,8 +36,8 @@ test.describe('Explore search and filtering', () => {
 
     await expect(searchInput).toBeVisible({ timeout: 5000 })
 
-    // Capture how many cards are visible before searching
-    const cardsBefore = await page.locator('[class*="card"], [class*="Card"]').count()
+    // Capture how many result cards are visible before searching
+    const cardsBefore = await countResultCards(page)
 
     await searchInput.fill('electronics')
     await page.waitForTimeout(600) // debounce
@@ -36,7 +48,7 @@ test.describe('Explore search and filtering', () => {
 
     // Either: fewer cards (filtered), same cards (no match shown differently),
     // or an empty state — all are valid filtered outcomes
-    const cardsAfter = await page.locator('[class*="card"], [class*="Card"]').count()
+    const cardsAfter = await countResultCards(page)
     const emptyState = await page.locator('text=/no suppliers|no results|empty/i').count()
     expect(cardsAfter <= cardsBefore || emptyState > 0).toBe(true)
   })
@@ -47,8 +59,7 @@ test.describe('Explore search and filtering', () => {
     ).first()
 
     await expect(searchInput).toBeVisible({ timeout: 5000 })
-    // Scope to results area [role="main"] to avoid counting sidebar card-like elements
-    const cardsBefore = await page.locator('[role="main"]').last().locator('[class*="card" i]').count()
+    const cardsBefore = await countResultCards(page)
 
     await searchInput.fill('zzz_no_match_xyz')
     await page.waitForTimeout(600)
@@ -57,7 +68,7 @@ test.describe('Explore search and filtering', () => {
     await page.waitForTimeout(600)
 
     // After clearing, cards should be back to the original count
-    const cardsAfter = await page.locator('[role="main"]').last().locator('[class*="card" i]').count()
+    const cardsAfter = await countResultCards(page)
     expect(cardsAfter).toBe(cardsBefore)
   })
 
@@ -68,7 +79,6 @@ test.describe('Explore search and filtering', () => {
     // Pick the second option (first non-"All" category)
     const options = await categorySelect.locator('option').all()
     if (options.length > 1) {
-      const secondOption = await options[1].getAttribute('value') ?? await options[1].textContent()
       await categorySelect.selectOption({ index: 1 })
       await page.waitForTimeout(600)
 
@@ -100,8 +110,9 @@ test.describe('Explore search and filtering', () => {
   })
 
   test('clicking a supplier card opens the brand detail page', async ({ page }) => {
-    const card = page.locator('[class*="card"], [class*="Card"]').first()
-    const hasCard = await card.isVisible().catch(() => false)
+    // Scope to inner results <main> using article.card to avoid the sidebar
+    const card = page.locator('main').last().locator('article.card').first()
+    const hasCard = await card.isVisible({ timeout: 5000 }).catch(() => false)
 
     if (!hasCard) {
       test.skip(true, 'No supplier cards in DB — skipping navigation test')
@@ -109,7 +120,7 @@ test.describe('Explore search and filtering', () => {
     }
 
     await card.click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     // Brand detail page should be visible — no crash, and has some content
     const errorText = page.locator('text=/something went wrong|application error/i')

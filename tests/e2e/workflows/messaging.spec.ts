@@ -126,27 +126,27 @@ test.describe('Send a private message to a supplier', () => {
   })
 
   test('"Send message" button is present on a brand detail page', async ({ page }) => {
-    // Scope to results [role="main"] — [class*="card"] alone also matches the filter sidebar
-    const card = page.locator('[role="main"]').last().locator('[class*="card" i]').first()
+    // Use main.last() + article.card — targets the inner results <main>, not the sidebar
+    const card = page.locator('main').last().locator('article.card').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return
     }
     await card.click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const sendBtn = page.locator('button, a').filter({ hasText: /send message/i }).first()
     await expect(sendBtn).toBeVisible({ timeout: 6000 })
   })
 
   test('clicking "Send message" opens the compose form', async ({ page }) => {
-    const card = page.locator('[role="main"]').last().locator('[class*="card" i]').first()
+    const card = page.locator('main').last().locator('article.card').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return
     }
     await card.click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const sendBtn = page.locator('button, a').filter({ hasText: /send message/i }).first()
     if (!await sendBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
@@ -163,13 +163,13 @@ test.describe('Send a private message to a supplier', () => {
   })
 
   test('filling and submitting the compose form sends the message', async ({ page }) => {
-    const card = page.locator('[role="main"]').last().locator('[class*="card" i]').first()
+    const card = page.locator('main').last().locator('article.card').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return
     }
     await card.click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const sendBtn = page.locator('button, a').filter({ hasText: /send message/i }).first()
     if (!await sendBtn.isVisible({ timeout: 5000 }).catch(() => false)) {

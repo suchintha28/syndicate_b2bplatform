@@ -8,14 +8,15 @@ import { test, expect } from '@playwright/test'
  */
 
 // ---------------------------------------------------------------------------
-// Helper — reads the "Showing N suppliers" counter and returns N (0 if absent)
+// Helper — reads the "Showing N suppliers" counter from the results <main>
+// and returns N (0 if absent or not yet loaded).
 // ---------------------------------------------------------------------------
 async function getSupplierCount(page: import('@playwright/test').Page): Promise<number> {
   try {
     const text = await page
       .locator('text=/showing \\d+ supplier/i')
       .first()
-      .textContent({ timeout: 5000 })
+      .textContent({ timeout: 8000 })
     const match = text?.match(/\d+/)
     return match ? parseInt(match[0], 10) : 0
   } catch {
@@ -23,12 +24,23 @@ async function getSupplierCount(page: import('@playwright/test').Page): Promise<
   }
 }
 
-// Helper — returns the first supplier card element scoped to the results area.
-// The Explore screen renders a results container with role="main" (a <div>) inside
-// the outer <main> page shell. Using [role="main"] targets only that inner results
-// div, avoiding the filter sidebar which also has card-like CSS classes.
+// Helper — returns the first supplier result card.
+//
+// DOM structure of ExploreScreen:
+//   <main>  ← outer page shell
+//     <aside>
+//       <div class="card"> ← filter sidebar (NOT a supplier card)
+//     </aside>
+//     <main>  ← inner results area (second <main>, matched by .last())
+//       <article class="card card-hover ..."> ← actual supplier cards
+//     </main>
+//   </main>
+//
+// We use `page.locator('main').last()` to target the inner results <main>,
+// then `article.card` to match only <article> elements (supplier cards),
+// which excludes the sidebar <div class="card"> inside <aside>.
 function firstSupplierCard(page: import('@playwright/test').Page) {
-  return page.locator('[role="main"]').last().locator('[class*="card" i], [class*="Card"]').first()
+  return page.locator('main').last().locator('article.card').first()
 }
 
 // ---------------------------------------------------------------------------
@@ -64,7 +76,7 @@ test.describe('Explore / Listing screen', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     await page.locator('nav a, nav button').filter({ hasText: /explore/i }).first().click()
-    await page.waitForTimeout(500)
+    await page.waitForLoadState('networkidle')
   })
 
   test('Explore screen loads without an error message', async ({ page }) => {
@@ -88,10 +100,10 @@ test.describe('Explore / Listing screen', () => {
     const count = await getSupplierCount(page)
     if (count > 0) {
       const card = firstSupplierCard(page)
-      await expect(card).toBeVisible({ timeout: 5000 })
+      await expect(card).toBeVisible({ timeout: 8000 })
     } else {
       const emptyState = page.locator('text=/no suppliers|no results|empty|no.*match|0 suppliers/i').first()
-      await expect(emptyState).toBeVisible({ timeout: 5000 })
+      await expect(emptyState).toBeVisible({ timeout: 8000 })
     }
   })
 
@@ -113,7 +125,7 @@ test.describe('Supplier (brand) detail page', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     await page.locator('nav a, nav button').filter({ hasText: /explore/i }).first().click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
   })
 
   test('opening a supplier card loads the brand detail page without an error', async ({ page }) => {
@@ -123,7 +135,7 @@ test.describe('Supplier (brand) detail page', () => {
       return
     }
     await firstSupplierCard(page).click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
     const errorText = page.locator('text=/something went wrong|application error/i')
     await expect(errorText).toHaveCount(0)
   })
@@ -135,7 +147,7 @@ test.describe('Supplier (brand) detail page', () => {
       return
     }
     await firstSupplierCard(page).click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
     const reviewsHeading = page.locator('text=/reviews/i').first()
     await expect(reviewsHeading).toBeVisible({ timeout: 6000 })
   })
@@ -147,7 +159,7 @@ test.describe('Supplier (brand) detail page', () => {
       return
     }
     await firstSupplierCard(page).click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
     const writeReviewBtn = page.locator('button').filter({ hasText: /write a review/i }).first()
     await expect(writeReviewBtn).toBeVisible({ timeout: 6000 })
   })
@@ -158,7 +170,7 @@ test.describe('Product detail page', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     await page.locator('nav a, nav button').filter({ hasText: /explore/i }).first().click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const count = await getSupplierCount(page)
     if (count === 0) {
@@ -166,7 +178,7 @@ test.describe('Product detail page', () => {
       return
     }
     await firstSupplierCard(page).click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const productLink = page.locator('button, a').filter({ hasText: /view/i }).first()
     if (!await productLink.isVisible().catch(() => false)) {
@@ -174,7 +186,7 @@ test.describe('Product detail page', () => {
       return
     }
     await productLink.click()
-    await page.waitForTimeout(800)
+    await page.waitForLoadState('networkidle')
 
     const errorText = page.locator('text=/something went wrong|application error|An error occurred/i')
     await expect(errorText).toHaveCount(0)
@@ -184,7 +196,7 @@ test.describe('Product detail page', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     await page.locator('nav a, nav button').filter({ hasText: /explore/i }).first().click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const count = await getSupplierCount(page)
     if (count === 0) {
@@ -192,7 +204,7 @@ test.describe('Product detail page', () => {
       return
     }
     await firstSupplierCard(page).click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     const productLink = page.locator('button, a').filter({ hasText: /view/i }).first()
     if (!await productLink.isVisible().catch(() => false)) {
@@ -200,7 +212,7 @@ test.describe('Product detail page', () => {
       return
     }
     await productLink.click()
-    await page.waitForTimeout(800)
+    await page.waitForLoadState('networkidle')
 
     const reviewsSection = page.locator('text=/customer reviews|reviews/i').first()
     await expect(reviewsSection).toBeVisible({ timeout: 6000 })
@@ -212,7 +224,7 @@ test.describe('RFQs screen — Browse tab (guest accessible)', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
     await page.locator('nav a, nav button').filter({ hasText: /rfq/i }).first().click()
-    await page.waitForTimeout(500)
+    await page.waitForLoadState('networkidle')
   })
 
   test('RFQs screen loads without an error message', async ({ page }) => {

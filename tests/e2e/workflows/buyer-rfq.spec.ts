@@ -58,8 +58,8 @@ test.describe('Buyer explores supplier listings', () => {
   })
 
   test('explore page loads supplier cards', async ({ page }) => {
-    // Page should show at least one supplier card or an empty-state message
-    const card       = page.locator('[class*="card"], [class*="Card"]').first()
+    // Scope to inner results <main> — the sidebar also has <div class="card">
+    const card       = page.locator('main').last().locator('article.card').first()
     const emptyState = page.locator('text=/no suppliers|no results|be the first/i').first()
     const hasCard    = await card.isVisible({ timeout: 8_000 }).catch(() => false)
     const hasEmpty   = await emptyState.isVisible({ timeout: 3_000 }).catch(() => false)
@@ -67,7 +67,7 @@ test.describe('Buyer explores supplier listings', () => {
   })
 
   test('buyer can click a supplier card and view their profile page', async ({ page }) => {
-    const card = page.locator('[class*="card"], [class*="Card"]').first()
+    const card = page.locator('main').last().locator('article.card').first()
     const hasCard = await card.isVisible({ timeout: 8_000 }).catch(() => false)
 
     if (!hasCard) {
@@ -76,7 +76,7 @@ test.describe('Buyer explores supplier listings', () => {
     }
 
     await card.click()
-    await page.waitForTimeout(600)
+    await page.waitForLoadState('networkidle')
 
     // Should be on a brand/supplier detail screen — look for a heading or about section
     const heading    = page.locator('h1, h2').first()

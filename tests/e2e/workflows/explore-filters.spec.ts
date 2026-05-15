@@ -41,11 +41,13 @@ const SEL = {
   activeChip:   '[class*="chip"], [class*="filter-chip"], [class*="active-filter"]',
 }
 
-// Count only supplier result cards scoped to the inner results area.
-// The results container has role="main" (a <div>); using [role="main"].last()
-// targets it specifically, avoiding the filter sidebar's card-like elements.
+// Count only supplier result cards scoped to the inner results <main>.
+// ExploreScreen renders: outer <main> > <aside><div class="card"> (sidebar)
+//                                   > <main> <article class="card ..."> (results)
+// Using `main.last()` targets the inner results <main>; `article.card` matches
+// only <article> supplier cards, not the sidebar <div class="card">.
 async function countResultCards(page: import('@playwright/test').Page): Promise<number> {
-  return page.locator('[role="main"]').last().locator('[class*="card" i]').count()
+  return page.locator('main').last().locator('article.card').count()
 }
 
 // ── Industry filter ────────────────────────────────────────────────────────────
