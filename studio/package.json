@@ -1,0 +1,16 @@
+{
+  "name": "syndicate-studio",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "sanity dev",
+    "deploy": "sanity deploy"
+  },
+  "dependencies": {
+    "@sanity/vision": "^5.25.1",
+    "react": "^19.2.2",
+    "react-dom": "^19.2.2",
+    "sanity": "^5.25.1",
+    "styled-components": "^6.4.1"
+  }
+}
