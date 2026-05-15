@@ -15,15 +15,17 @@ export function dbBrandToBusiness(brand: DbBrand): Business {
     logo: initials,
     name: brand.name,
     category: primaryCategory,
-    rating: 4.5,
+    // rating and reviews start at 0; BusinessDetailScreen computes live values
+    // from the reviews it fetches so the card shows real data once available.
+    rating: 0,
     reviews: 0,
     description: brand.description,
     verified: brand.is_verified,
     featured: false,
     location: [brand.city, 'Sri Lanka'].filter(Boolean).join(', '),
-    priceRange: '$$',
+    priceRange: '',
     founded: new Date(brand.created_at).getFullYear(),
-    employees: '10-50',
+    // employees is not stored in the database — intentionally omitted
     cover: brand.cover_image_url || '',
     logoUrl: brand.logo_url || undefined,
   }

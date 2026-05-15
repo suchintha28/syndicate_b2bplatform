@@ -34,6 +34,14 @@ export const structure: StructureResolver = (S) =>
 
       S.divider(),
 
+      // ── Featured Merchants (singleton) ───────────────────────────────
+      S.listItem()
+        .title('Featured Merchants')
+        .id('featuredMerchants')
+        .child(S.document().schemaType('featuredMerchants').documentId('featuredMerchants')),
+
+      S.divider(),
+
       // ── Banners (multiple documents) ────────────────────────────────
       S.listItem()
         .title('Marketing banners')

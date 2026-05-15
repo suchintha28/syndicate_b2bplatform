@@ -52,7 +52,7 @@ export interface Business {
   location: string
   priceRange: string
   founded: number
-  employees: string
+  employees?: string   // not stored in DB — omitted for real brands
   cover: string
   logoUrl?: string
 }

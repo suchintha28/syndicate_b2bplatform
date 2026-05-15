@@ -120,3 +120,19 @@ export async function fetchSiteSettings(): Promise<SanitySiteSettings | null> {
     { next: { revalidate: 3600 } }
   )
 }
+
+/**
+ * Returns an ordered list of brand slugs for the "Discover suppliers" home
+ * section, as configured by the super admin in Sanity Studio.
+ * Returns an empty array if nothing has been published yet (section hides).
+ */
+export async function fetchFeaturedMerchants(): Promise<string[]> {
+  const doc = await client.fetch<{ slugs?: Array<{ slug: string }> } | null>(
+    `*[_type == "featuredMerchants" && _id == "featuredMerchants"][0] {
+      slugs[] { slug }
+    }`,
+    {},
+    { next: { revalidate: 300 } }  // 5-minute CDN cache
+  )
+  return (doc?.slugs ?? []).map(s => s.slug).filter(Boolean)
+}

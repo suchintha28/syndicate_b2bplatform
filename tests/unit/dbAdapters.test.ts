@@ -97,6 +97,26 @@ describe('dbBrandToBusiness', () => {
     expect(result.verified).toBe(true)
   })
 
+  it('sets rating to 0 — real rating is computed from fetched reviews, not hardcoded', () => {
+    const result = dbBrandToBusiness(VALID_BRAND)
+    expect(result.rating).toBe(0)
+  })
+
+  it('sets reviews to 0 — real count is computed from fetched reviews, not hardcoded', () => {
+    const result = dbBrandToBusiness(VALID_BRAND)
+    expect(result.reviews).toBe(0)
+  })
+
+  it('sets priceRange to empty string — computed from products, not hardcoded', () => {
+    const result = dbBrandToBusiness(VALID_BRAND)
+    expect(result.priceRange).toBe('')
+  })
+
+  it('does not set employees — field is not stored in the database', () => {
+    const result = dbBrandToBusiness(VALID_BRAND)
+    expect(result.employees).toBeUndefined()
+  })
+
   it('marks unverified brands as not verified', () => {
     const unverified: DbBrand = { ...VALID_BRAND, is_verified: false }
     const result = dbBrandToBusiness(unverified)

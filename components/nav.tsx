@@ -133,8 +133,9 @@ export function Footer({ goTo }: { goTo: (s: Screen) => void }) {
         <div className="footer-grid">
           <div className="footer-col">
             <div className="footer-brand-line">
-              <span className="footer-brand-mark">S</span>
-              <span className="footer-brand-name">Syndicate</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo-light.png" alt="Syndicate" height={28} style={{ display: 'block', height: 28, width: 'auto' }} />
+              <span className="footer-brand-name">Syndicate B2B Marketplace</span>
             </div>
             <p className="footer-tagline">
               The B2B network for serious buyers. Verified suppliers, structured RFQs,
@@ -165,7 +166,7 @@ export function Footer({ goTo }: { goTo: (s: Screen) => void }) {
           </div>
         </div>
         <div className="footer-bottom">
-          <div>© 2026 Syndicate Marketplace, Inc.</div>
+          <div>© 2026 Syndicate B2B Marketplace, Inc.</div>
           <div className="footer-bottom-links">
             <button onClick={() => goTo('about')}>About</button>
             <button onClick={() => goTo('contact')}>Contact</button>

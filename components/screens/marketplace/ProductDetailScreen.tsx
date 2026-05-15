@@ -74,26 +74,43 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
   const unitPrice = varPrice ? varPrice : (tier?.price ?? baseForTier)
   const totalPrice = unitPrice * qty
 
-  // Default specs
-  const productSpecs = product.productSpecs?.length ? product.productSpecs : [
-    { label: 'Brand', value: business?.name ?? '—' },
-    { label: 'Category', value: product.category },
-    { label: 'MOQ', value: product.tieredPricing[0] ? `${product.tieredPricing[0].min} units` : '1 unit' },
-    { label: 'Warranty', value: '12 months' },
-    { label: 'Certifications', value: 'CE, RoHS' },
-  ]
-  const techSpecs = product.techSpecs?.length ? product.techSpecs : [
-    { label: 'Connectivity', value: 'WiFi, Bluetooth 5.0' },
-    { label: 'Power',        value: 'DC 5V / USB-C' },
-    { label: 'Dimensions',   value: '120 × 80 × 30 mm' },
-    { label: 'Weight',       value: '180 g' },
-    { label: 'Operating temp', value: '-20 °C to +70 °C' },
-  ]
+  // Use only real specs from the database — no fabricated defaults.
+  // Suppliers must fill these in via the product management screen.
+  const productSpecs = product.productSpecs ?? []
+  const techSpecs    = product.techSpecs    ?? []
 
-  const handleRevPhotoAdd = () => {
-    // Photo upload is handled server-side; this button is a placeholder UI until
-    // file-upload is wired. For now it is intentionally a no-op.
+  const handleRevPhotoAdd = async () => {
     if (revPhotos.length >= 2) return
+    // Trigger a hidden <input type="file"> to let the user pick a photo.
+    // The selected file is uploaded to the review-photos Supabase bucket and
+    // the resulting public URL is appended to revPhotos state so it is
+    // included in the review payload on submit.
+    const input = document.createElement('input')
+    input.type   = 'file'
+    input.accept = 'image/jpeg,image/jpg,image/png,image/webp'
+    input.onchange = async () => {
+      const file = input.files?.[0]
+      if (!file) return
+      setRevError('')
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) { setRevError('Sign in to add photos.'); return }
+        const ext  = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+        const path = `${user.id}/${Date.now()}.${ext}`
+        const { error: upErr } = await supabase.storage
+          .from('review-photos')
+          .upload(path, file, { upsert: false })
+        if (upErr) { setRevError(upErr.message); return }
+        const { data: urlData } = supabase.storage
+          .from('review-photos')
+          .getPublicUrl(path)
+        setRevPhotos(p => [...p, urlData.publicUrl])
+      } catch (e: unknown) {
+        setRevError(e instanceof Error ? e.message : 'Upload failed.')
+      }
+    }
+    input.click()
   }
 
   return (
@@ -233,24 +250,36 @@ export function ProductDetailScreen({ product, business, goTo, setSelectedBusine
           ))}
         </div>
         {specsTab === 'product' && (
-          <div className="specs-table">
-            {productSpecs.map((s, i) => (
-              <div key={i} className="specs-row">
-                <div className="specs-label">{s.label}</div>
-                <div className="specs-value">{s.value}</div>
-              </div>
-            ))}
-          </div>
+          productSpecs.length > 0 ? (
+            <div className="specs-table">
+              {productSpecs.map((s, i) => (
+                <div key={i} className="specs-row">
+                  <div className="specs-label">{s.label}</div>
+                  <div className="specs-value">{s.value}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted" style={{ padding: '16px 0' }}>
+              No product specifications have been added yet.
+            </p>
+          )
         )}
         {specsTab === 'technical' && (
-          <div className="specs-table">
-            {techSpecs.map((s, i) => (
-              <div key={i} className="specs-row">
-                <div className="specs-label">{s.label}</div>
-                <div className="specs-value">{s.value}</div>
-              </div>
-            ))}
-          </div>
+          techSpecs.length > 0 ? (
+            <div className="specs-table">
+              {techSpecs.map((s, i) => (
+                <div key={i} className="specs-row">
+                  <div className="specs-label">{s.label}</div>
+                  <div className="specs-value">{s.value}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted" style={{ padding: '16px 0' }}>
+              No technical specifications have been added yet.
+            </p>
+          )
         )}
         {specsTab === 'pricing' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>

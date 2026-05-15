@@ -8,6 +8,7 @@ import { dbBrandToBusiness, dbProductToProduct } from '@/lib/supabase/queries'
 import { CATEGORIES, type Business, type Product } from '@/lib/data'
 import type { CommonProps } from './_shared'
 import { MarketingBanner } from '@/components/MarketingBanner'
+import { fetchFeaturedMerchants } from '@/sanity/lib/queries'
 
 export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favorites, toggleFavorite, recentlyViewedBrands, cardStyle }: CommonProps & { recentlyViewedBrands: Business[] }) {
   const [featuredBrands, setFeaturedBrands] = useState<Business[]>([])
@@ -20,18 +21,31 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
     let mounted = true
     async function load() {
       const supabase = createClient()
-      const [brandsRes, productsRes, brandCountRes, productCountRes] = await Promise.all([
-        supabase.from('brands').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(12),
+      const [brandsRes, productsRes, brandCountRes, productCountRes, featuredSlugs] = await Promise.all([
+        supabase.from('brands').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(6),
         supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false }).limit(4),
         supabase.from('brands').select('*', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        fetchFeaturedMerchants(),
       ])
       if (!mounted) return
-      const brands = (brandsRes.data || []).map(dbBrandToBusiness)
-      setFeaturedBrands(brands.slice(0, 6))
-      setDiscoverBrands(brands.slice(6))
+
+      setFeaturedBrands((brandsRes.data || []).map(dbBrandToBusiness))
       setTrendingProducts((productsRes.data || []).map(dbProductToProduct))
       setStats({ suppliers: brandCountRes.count || 0, products: productCountRes.count || 0 })
+
+      // Discover suppliers: fetch the admin-curated list from Sanity.
+      // Falls back to nothing if Sanity returns an empty list (section is hidden).
+      if (featuredSlugs && featuredSlugs.length > 0) {
+        const discoverRes = await supabase
+          .from('brands')
+          .select('*')
+          .eq('is_active', true)
+          .in('slug', featuredSlugs)
+          .limit(6)
+        if (mounted) setDiscoverBrands((discoverRes.data || []).map(dbBrandToBusiness))
+      }
+
       setLoading(false)
     }
     load()
@@ -55,12 +69,17 @@ export function HomeScreen({ goTo, setSelectedBusiness, setSelectedProduct, favo
             <input type="text" placeholder="Search suppliers, products, or capabilities…" className="field" onFocus={() => goTo('listing')} />
             <Button variant="primary" type="submit" icon="search">Search</Button>
           </form>
-          <div className="hero-stats">
-            <div><div className="hero-stat-num">{stats.suppliers > 0 ? stats.suppliers.toLocaleString() : '—'}</div><div className="hero-stat-label">Suppliers</div></div>
-            <div><div className="hero-stat-num">{stats.products > 0 ? stats.products.toLocaleString() : '—'}</div><div className="hero-stat-label">Products</div></div>
-            <div><div className="hero-stat-num">LKR 480B</div><div className="hero-stat-label">In RFQs YTD</div></div>
-            <div><div className="hero-stat-num">98%</div><div className="hero-stat-label">Verified</div></div>
-          </div>
+          {/* Hero stats — only shown once real counts are available */}
+          {(stats.suppliers > 0 || stats.products > 0) && (
+            <div className="hero-stats">
+              {stats.suppliers > 0 && (
+                <div><div className="hero-stat-num">{stats.suppliers.toLocaleString()}</div><div className="hero-stat-label">Suppliers</div></div>
+              )}
+              {stats.products > 0 && (
+                <div><div className="hero-stat-num">{stats.products.toLocaleString()}</div><div className="hero-stat-label">Products</div></div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 

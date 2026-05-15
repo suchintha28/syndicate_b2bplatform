@@ -47,6 +47,12 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
   if (!business) return null
   const favorited = favorites.includes(business.id)
 
+  // Compute real avg rating and count from fetched reviews
+  const avgRating = reviews.length > 0
+    ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10) / 10
+    : 0
+  const reviewCount = reviews.length
+
   return (
     <div className="fade-up">
       {/* Cover — only rendered when a cover image has been uploaded */}
@@ -89,14 +95,12 @@ export function BusinessDetailScreen({ business, goTo, setSelectedProduct, favor
             </div>
           </div>
 
-          {/* Stats strip */}
+          {/* Stats strip — all values computed from real DB data */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16, padding: '24px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
             {[
               { l: 'Products', v: productsLoading ? '…' : String(brandProducts.length) },
-              { l: 'Rating', v: `${business.rating}.0` },
-              { l: 'Reviews', v: String(business.reviews) },
-              { l: 'Employees', v: business.employees },
-              { l: 'Price range', v: business.priceRange },
+              { l: 'Rating',   v: revLoading ? '…' : avgRating > 0 ? `${avgRating} / 5` : 'No ratings' },
+              { l: 'Reviews',  v: revLoading ? '…' : String(reviewCount) },
             ].map((s, i) => (
               <div key={i}>
                 <div className="uppercase-label mb-1">{s.l}</div>
