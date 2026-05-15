@@ -121,11 +121,12 @@ describe('dbBrandToBusiness', () => {
     expect(result.logo).toBe('AC')
   })
 
-  it('falls back to default cover image when cover_image_url is null', () => {
+  it('returns an empty string for cover when cover_image_url is null (no placeholder fallback)', () => {
     const nocover: DbBrand = { ...VALID_BRAND, cover_image_url: null as unknown as string }
     const result = dbBrandToBusiness(nocover)
-    // Should fall back to a category or default cover, not be empty
-    expect(result.cover).toBeTruthy()
+    // Placeholder images are intentionally removed — empty string means
+    // the UI will render a blank area instead of a stock photo.
+    expect(result.cover).toBe('')
     expect(typeof result.cover).toBe('string')
   })
 
@@ -186,16 +187,17 @@ describe('dbProductToProduct', () => {
     expect(result.price).toBe('Contact for price')
   })
 
-  it('falls back to a picsum placeholder image when images array is empty', () => {
+  it('returns an empty string for image when images array is empty (no placeholder fallback)', () => {
     const noImages: DbProduct = { ...VALID_PRODUCT, images: [] }
     const result = dbProductToProduct(noImages)
-    expect(result.image).toContain('picsum.photos')
+    // Placeholder images are intentionally removed — UI renders a blank area.
+    expect(result.image).toBe('')
   })
 
-  it('falls back to picsum when images is null (DB default before migration)', () => {
+  it('returns an empty string for image when images is null (DB default before migration)', () => {
     const nullImages: DbProduct = { ...VALID_PRODUCT, images: null as unknown as string[] }
     const result = dbProductToProduct(nullImages)
-    expect(result.image).toContain('picsum.photos')
+    expect(result.image).toBe('')
   })
 
   it('preserves the product description', () => {
