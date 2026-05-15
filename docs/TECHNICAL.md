@@ -166,9 +166,43 @@ TypeScript types for all database tables live in `types/database.ts`.
 |---|---|
 | `profiles` | Extends `auth.users`. Stores display name, role (`buyer`/`seller`), avatar URL, phone. Auto-created via trigger on signup. |
 | `brands` | Seller-owned storefronts. Name, slug, logo, cover image, categories, contact info, verification status. |
-| `products` | Catalogue items belonging to a brand. Images array, price range, MOQ, unit, tags, active flag. |
+| `products` | Catalogue items belonging to a brand. Images array, price range, MOQ, unit, tags, tiered pricing, variations, specs, active flag. |
 | `rfqs` | Quote requests sent by a buyer to a brand (optionally for a specific product). Status: `pending → read → responded → closed`. |
 | `rfq_responses` | Thread replies on an RFQ, visible to both the buyer and the seller. |
+| `rfq_bids` | Supplier bids on public RFQs. Status: `pending → accepted / declined`. |
+| `notifications` | In-app notifications for bid events (`bid_received`, `bid_accepted`, `bid_declined`). |
+| `reviews` | Product and brand reviews. One review per reviewer per target (enforced by unique constraint). |
+
+### Extended product fields (JSONB)
+
+Four JSONB columns on the `products` table store structured data:
+
+| Column | Type | Shape | Purpose |
+|---|---|---|---|
+| `tiered_pricing` | `jsonb` | `[{l: number, v: number}]` | Price breaks — `l` = min quantity, `v` = unit price (LKR) |
+| `variations` | `jsonb` | `[{name, unitPrice}]` | Product variants (size, colour, etc.) with per-variant pricing |
+| `product_specs` | `jsonb` | `[{l: string, v: string}]` | Label/value pairs shown in the Product specs tab |
+| `tech_specs` | `jsonb` | `[{l: string, v: string}]` | Label/value pairs shown in the Technical specs tab |
+
+All four default to `'[]'::jsonb` so existing rows are never null.
+
+### Reviews table
+
+```sql
+reviews (
+  id            uuid PRIMARY KEY,
+  reviewer_id   uuid REFERENCES profiles(id) ON DELETE CASCADE,
+  target_type   text CHECK (target_type IN ('product', 'brand')),
+  target_id     uuid,
+  rating        integer CHECK (rating BETWEEN 1 AND 5),
+  title         text,
+  body          text NOT NULL,
+  photos        text[] DEFAULT '{}',
+  created_at    timestamptz DEFAULT now()
+)
+```
+
+Unique constraint on `(reviewer_id, target_type, target_id)` — one review per user per item. Upsert with `onConflict: 'reviewer_id,target_type,target_id'` allows editing an existing review.
 
 ### Row Level Security
 
@@ -181,6 +215,9 @@ RLS is enabled on every table. Policy summary:
 | `products` | Public (active products only) | Brand owner only |
 | `rfqs` | Buyer (own RFQs) + Seller (for their brands) | Buyer inserts; Seller updates status |
 | `rfq_responses` | Both parties to the RFQ | Both parties can insert |
+| `rfq_bids` | Both parties to the RFQ | Seller inserts; both can read |
+| `notifications` | Recipient only | System inserts |
+| `reviews` | Public | Authenticated users insert/update own reviews; delete own reviews |
 
 ### Auto-triggers
 
@@ -289,23 +326,62 @@ To deploy studio changes: `cd studio && npx sanity deploy`
 | E2E tests | Playwright (Chromium) | `tests/e2e/` | Requires the Next.js app to be running |
 | CI | GitHub Actions | `.github/workflows/ci.yml` | On every push/PR to `main` |
 
+### Playwright projects
+
+The E2E suite is split into four projects:
+
+| Project | Auth | Matches |
+|---|---|---|
+| `setup` | Logs in as seller → saves `tests/e2e/.auth/user.json` | `setup/auth.setup.ts` |
+| `setup-buyer` | Logs in as buyer → saves `tests/e2e/.auth/buyer.json` | `setup/auth.buyer.setup.ts` |
+| `chromium` | None (guest) | All files except `setup/` and `workflows/` |
+| `chromium-authenticated` | Seller session | `workflows/` (non-`buyer-` files) |
+| `chromium-buyer` | Buyer session | `workflows/buyer-*.spec.ts` |
+
+### Test accounts
+
+Two dedicated Supabase accounts are pre-created for E2E testing:
+
+| Account | Email | Role |
+|---|---|---|
+| Seller | `e2e_seller@syndicate-test.dev` | seller |
+| Buyer | `e2e_buyer@syndicate-test.dev` | buyer |
+
+Credentials are in `.env.local` (local) and GitHub Secrets (CI). See `.env.test.example`.
+
 ### Unit test files
 
 | File | What it covers |
 |---|---|
-| `tests/unit/generateSlug.test.ts` | `generateSlug()` in `lib/supabase/queries.ts` — slug rules, edge cases |
-| `tests/unit/dbAdapters.test.ts` | `dbBrandToBusiness()` and `dbProductToProduct()` — DB row → UI type conversion |
+| `tests/unit/generateSlug.test.ts` | `generateSlug()` — slug rules, edge cases |
+| `tests/unit/dbAdapters.test.ts` | `dbBrandToBusiness()`, `dbProductToProduct()` — including tiered pricing, variations, specs mapping, null safety |
 | `tests/unit/authContext.test.tsx` | Supabase auth contract — session presence, `onAuthStateChange`, `signOut` (all mocked) |
-| `tests/unit/navOpts.test.ts` | Navigation logic — private screen guard, `rfqId`/`brandId` opt passing, guest redirects |
+| `tests/unit/navOpts.test.ts` | Navigation logic — private screen guard, opt passing, guest redirects |
+| `tests/unit/reviews.test.ts` | `reviewerInitials()`, `formatReviewDate()`, `isReviewSubmittable()`, `DbReview` shape |
 
 ### E2E test files
 
+**Guest / smoke tests:**
+
 | File | What it covers |
 |---|---|
-| `tests/e2e/guest-browsing.spec.ts` | Homepage, Explore, RFQs screens as a guest; auth redirect on protected actions |
-| `tests/e2e/auth.spec.ts` | `/register`, `/login`, `/forgot-password` — field presence, validation, error messages |
+| `tests/e2e/guest-browsing.spec.ts` | Homepage, Explore, RFQs as a guest; auth redirect on protected actions |
+| `tests/e2e/auth.spec.ts` | `/register`, `/login`, `/forgot-password` — field presence, validation, errors |
 | `tests/e2e/navigation.spec.ts` | Bottom nav tabs, logo click, mobile viewport (375 px) |
-| `tests/e2e/marketplace.spec.ts` | Homepage, Explore, RFQs screen smoke tests — no crashes, key elements present |
+| `tests/e2e/marketplace.spec.ts` | Homepage, Explore, brand detail, product detail smoke tests |
+
+**Authenticated workflow tests (`tests/e2e/workflows/`):**
+
+| File | Role | What it covers |
+|---|---|---|
+| `seller-product.spec.ts` | Seller | Add product, image upload, product visible on listing |
+| `image-upload.spec.ts` | Seller | Profile photo, logo, product image upload flows |
+| `explore-search.spec.ts` | Seller | Search bar, keyword results, clear search |
+| `explore-filters.spec.ts` | Seller | Industry/location/rating/price filters, sort chips, tab switching, active chips, Reset button, multi-filter combos |
+| `rfq-workflow.spec.ts` | Seller | Post a request, My requests tab, write a review |
+| `messaging.spec.ts` | Seller | Inbox load, compose, thread reply, bid submission |
+| `edit-flows.spec.ts` | Seller | Edit product fields (name/desc/price/tiers/variations/specs), edit brand profile fields, cancel, active toggle |
+| `buyer-rfq.spec.ts` | Buyer | Buyer dashboard, explore as buyer, post RFQ, inbox |
 
 ### NPM scripts
 
@@ -321,9 +397,9 @@ npm run test               # Run unit tests then E2E tests
 
 ### Standing rule — test maintenance
 
-After any feature build or bug fix, always ask: "Do you want me to update the test suite to reflect these changes?" Tests are never updated or deleted without explicit confirmation. When a code change causes existing tests to fail, the failures are flagged and a fix plan is presented before any test files are changed.
+Every new feature must include tests for all user-facing flows — both guest and authenticated. After any code change that affects user-visible behaviour, the test suite must be updated in the same commit. Tests are never deleted without a deliberate reason.
 
-See `tests/README.md` for the full guide on running tests, reading reports, and adding new tests.
+See `tests/README.md` for the full guide on running, debugging, and adding tests.
 
 ---
 
@@ -354,6 +430,8 @@ Database changes are managed as sequential SQL files in `supabase/migrations/`.
 | `20260515000000_banners.sql` | Add `banners` table (superseded by Sanity CMS — table unused) |
 | `20260515120000_fix_products_storage_policy.sql` | **Fix:** Products storage RLS name collision bug (see below) |
 | `20260515130000_fix_rfq_files_policy.sql` | **Fix:** Add missing UPDATE policy on `rfq-files`; add PDF to allowed types |
+| `20260515140000_products_add_extended_fields.sql` | Add `tiered_pricing`, `variations`, `product_specs`, `tech_specs` JSONB columns to `products` (all default `'[]'::jsonb`) |
+| `20260515150000_create_reviews.sql` | Add `reviews` table with RLS, unique constraint on `(reviewer_id, target_type, target_id)`, and reviewer profile join index |
 
 ---
 

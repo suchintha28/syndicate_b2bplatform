@@ -309,13 +309,24 @@ Horizontal marketing banners are placed at four locations in the app, each drive
 
 Each banner has: title, subtitle, CTA button (text + URL), background image, background colour, text colour, active toggle, sort order, and optional start/end date for scheduling. Banners are fetched with a 5-minute SWR cache and render nothing (zero layout impact) when no active banner exists for a slot. Banners are created and managed in the Sanity Studio at `https://syndicate-b2b-cms.sanity.studio`.
 
-### 4.17 Add / Edit Product — Specifications
+### 4.17 Add / Edit Product — Extended Fields
 
-The product form (Add product and Edit product screens) includes a **Specifications** card between the Variations section and the Direct Sales toggle:
+The product form (Add product and Edit product screens) includes three cards for structured product data, all persisted to the database:
 
+**Tiered pricing**
+- Multiple price tiers with a minimum quantity and a unit price (LKR) per tier.
+- The live buy-box on the product detail page calculates the unit price for the current quantity from these tiers.
+- Stored in `products.tiered_pricing` JSONB column (`[{l: minQty, v: unitPrice}]`).
+
+**Variations**
+- Named variants (size, colour, grade, etc.) each with their own unit price.
+- Selecting a variation tile on the product detail page updates the displayed unit price.
+- Stored in `products.variations` JSONB column (`[{name, unitPrice}]`).
+
+**Specifications**
 - **Product specifications** — editable rows with Label + Value inputs. Defaults: Brand, Model, Warranty. Rows can be added or removed.
 - **Technical specifications** — same row pattern. Starts with one blank row.
-- Values are UI-only state for now (not yet persisted to the database); they will be stored in `products.product_specs` / `products.tech_specs` JSONB columns in a future migration.
+- Stored in `products.product_specs` and `products.tech_specs` JSONB columns (`[{l: label, v: value}]`).
 
 ---
 
@@ -381,6 +392,10 @@ Product listings attached to a brand.
 | `price_range_max` | decimal(12,2) | |
 | `unit` | text | e.g. "units", "kg", "boxes" |
 | `tags` | text[] | |
+| `tiered_pricing` | jsonb | Price tiers: `[{l: minQty, v: unitPrice}]`. Default `[]`. |
+| `variations` | jsonb | Product variants: `[{name, unitPrice}]`. Default `[]`. |
+| `product_specs` | jsonb | Spec rows: `[{l: label, v: value}]`. Default `[]`. |
+| `tech_specs` | jsonb | Tech spec rows: `[{l: label, v: value}]`. Default `[]`. |
 | `is_active` | boolean | Controls visibility |
 
 #### `rfqs`
@@ -453,6 +468,25 @@ In-app notifications for bid activity.
 | `read` | boolean | Default false; set to true when user views notification feed |
 | `created_at` | timestamptz | |
 
+#### `reviews`
+User-submitted product and brand reviews.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | uuid | Primary key |
+| `reviewer_id` | uuid | References `profiles(id)` → CASCADE delete |
+| `target_type` | text | `'product'` or `'brand'` |
+| `target_id` | uuid | ID of the product or brand being reviewed |
+| `rating` | integer | 1–5 (enforced by CHECK constraint) |
+| `title` | text | Optional review headline |
+| `body` | text | Required review text |
+| `photos` | text[] | Up to 2 photo URLs (Supabase Storage) |
+| `created_at` | timestamptz | |
+
+Unique constraint on `(reviewer_id, target_type, target_id)` — one review per user per item. Upsert with `onConflict` allows users to edit their existing review.
+
+**RLS:** Public SELECT (anyone can read reviews). Authenticated INSERT/UPDATE on own rows. Authenticated DELETE on own rows.
+
 #### `business_members`
 Membership table linking users to brands (provision for multi-user brand accounts).
 
@@ -486,6 +520,7 @@ auth.users
       → rfq_bids (via bidder_id)
       → notifications (via user_id)
       → business_members (via profile_id)
+      → reviews (via reviewer_id)
 ```
 
 ### Row Level Security (RLS)
