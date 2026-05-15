@@ -1,15 +1,41 @@
 const IMG = (id: string, w = 800) =>
   `https://images.unsplash.com/${id}?auto=format&fit=crop&w=${w}&q=80`
 
-export const CATEGORIES = ['Manufacturing', 'Technology', 'Construction', 'Logistics', 'Food & Bev', 'Services']
+// Industry categories — used in Explore filter, HomeScreen tiles, and CategoryIcon
+export const CATEGORIES = [
+  'Manufacturing',
+  'Technology',
+  'Construction',
+  'Logistics',
+  'Food & Beverage',
+  'Professional Services',
+  'Retail & Wholesale',
+  'Agriculture',
+  'Healthcare',
+  'Education',
+  'Hospitality & Tourism',
+  'Finance & Insurance',
+  'Apparel & Textiles',
+  'Export & Import',
+  'Printing & Packaging',
+]
 
 export const CATEGORY_META: Record<string, { hue: number; cover: string; seed: string }> = {
-  'Manufacturing': { hue: 22,  cover: IMG('photo-1565793298831-09f04bb2ce80'), seed: 'manufacturing' },
-  'Technology':    { hue: 250, cover: IMG('photo-1518770660439-4636190af475'), seed: 'technology' },
-  'Construction':  { hue: 40,  cover: IMG('photo-1503387762-592deb58ef4e'),    seed: 'construction' },
-  'Logistics':     { hue: 200, cover: IMG('photo-1601584115197-04ecc0da31d7'), seed: 'logistics' },
-  'Food & Bev':    { hue: 12,  cover: IMG('photo-1495474472287-4d71bcdd2085'), seed: 'food' },
-  'Services':      { hue: 270, cover: IMG('photo-1556761175-5973dc0f32e7'),    seed: 'services' },
+  'Manufacturing':       { hue: 22,  cover: IMG('photo-1565793298831-09f04bb2ce80'), seed: 'manufacturing' },
+  'Technology':          { hue: 250, cover: IMG('photo-1518770660439-4636190af475'), seed: 'technology' },
+  'Construction':        { hue: 40,  cover: IMG('photo-1503387762-592deb58ef4e'),    seed: 'construction' },
+  'Logistics':           { hue: 200, cover: IMG('photo-1601584115197-04ecc0da31d7'), seed: 'logistics' },
+  'Food & Beverage':     { hue: 12,  cover: IMG('photo-1495474472287-4d71bcdd2085'), seed: 'food' },
+  'Professional Services':{ hue: 270, cover: IMG('photo-1556761175-5973dc0f32e7'),   seed: 'services' },
+  'Retail & Wholesale':  { hue: 340, cover: IMG('photo-1607082348824-0a96f2a4b9da'), seed: 'retail' },
+  'Agriculture':         { hue: 100, cover: IMG('photo-1464226184884-fa280b87c399'), seed: 'agriculture' },
+  'Healthcare':          { hue: 195, cover: IMG('photo-1576091160399-112ba8d25d1d'), seed: 'healthcare' },
+  'Education':           { hue: 220, cover: IMG('photo-1580582932707-520aed937b7b'), seed: 'education' },
+  'Hospitality & Tourism':{ hue: 35, cover: IMG('photo-1566073771259-6a8506099945'), seed: 'hospitality' },
+  'Finance & Insurance': { hue: 215, cover: IMG('photo-1611974789855-9c2a0a7236a3'), seed: 'finance' },
+  'Apparel & Textiles':  { hue: 310, cover: IMG('photo-1558618666-fcd25c85cd64'),    seed: 'apparel' },
+  'Export & Import':     { hue: 180, cover: IMG('photo-1578575437130-527eed3abbec'), seed: 'export' },
+  'Printing & Packaging':{ hue: 55,  cover: IMG('photo-1563986768609-322da13575f3'), seed: 'printing' },
 }
 
 export interface Business {
@@ -49,8 +75,23 @@ export const BUSINESSES: Business[] = [
   { id: '15', logo: 'DT', name: 'DigitalTrade Hub',     category: 'Services',     rating: 5, reviews: 103, description: 'B2B marketplace platform and cross-border trade facilitation.',                   verified: true,  featured: false, location: 'Los Angeles, CA',   priceRange: '$$$',  founded: 2016, employees: '50-200',   cover: IMG('photo-1556761175-5973dc0f32e7') },
 ]
 
-export const LOCATIONS = ['All Locations', 'San Francisco, CA', 'New York, NY', 'Chicago, IL', 'Austin, TX', 'Seattle, WA', 'Portland, OR', 'Denver, CO', 'Boston, MA', 'Miami, FL', 'Atlanta, GA', 'Phoenix, AZ', 'Pittsburgh, PA', 'Los Angeles, CA', 'Detroit, MI']
-export const PRICE_RANGES = ['All Prices', '$', '$$', '$$$', '$$$$']
+// Sri Lankan cities — used in Explore location filter (matches brands.city column)
+export const SL_LOCATIONS = [
+  'All Locations',
+  'Colombo', 'Kandy', 'Galle', 'Negombo', 'Jaffna',
+  'Trincomalee', 'Batticaloa', 'Anuradhapura', 'Ratnapura', 'Kurunegala',
+  'Matara', 'Badulla', 'Kalutara', 'Hambantota', 'Ampara',
+]
+
+// Budget ranges based on products.price_range_min — replaces the broken $/$$/$$$/$$$$ filter
+export const BUDGET_RANGES = [
+  'All Budgets',
+  'Under LKR 10,000',
+  'LKR 10,000 – 100,000',
+  'LKR 100,000 – 500,000',
+  'Above LKR 500,000',
+]
+
 export const RATING_FILTERS = ['All Ratings', '5 Stars', '4+ Stars', '3+ Stars']
 
 export interface ProductVariation { name: string; price: number }
@@ -172,13 +213,27 @@ export const PLANS: Plan[] = [
 ]
 
 // Shared industry list — used in auth screens, register page, and profile edit
+// Aligned with CATEGORIES; includes broader options for buyer profiles
 export const INDUSTRIES = [
-  'Manufacturing', 'Technology', 'Construction', 'Logistics',
-  'Food & Beverage', 'Retail & Distribution', 'Healthcare & Pharmaceuticals',
-  'Agriculture & Agribusiness', 'Textiles & Apparel', 'Chemicals & Materials',
-  'Energy & Utilities', 'Financial Services', 'Professional Services',
-  'Hospitality & Tourism', 'Real Estate & Property', 'Education & Training',
-  'Media & Communications', 'Other',
+  'Manufacturing',
+  'Technology',
+  'Construction',
+  'Logistics',
+  'Food & Beverage',
+  'Professional Services',
+  'Retail & Wholesale',
+  'Agriculture',
+  'Healthcare',
+  'Education',
+  'Hospitality & Tourism',
+  'Finance & Insurance',
+  'Apparel & Textiles',
+  'Export & Import',
+  'Printing & Packaging',
+  'Real Estate & Property',
+  'Energy & Utilities',
+  'Media & Communications',
+  'Other',
 ]
 
 export interface UserProfile {

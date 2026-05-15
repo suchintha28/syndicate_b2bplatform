@@ -65,12 +65,24 @@ export function Icon({ name, size = 18, stroke = 'currentColor', strokeWidth = 2
 }
 
 const CATEGORY_ICON_MAP: Record<string, string> = {
-  'Manufacturing': 'factory',
-  'Technology':    'cpu',
-  'Construction':  'tool',
-  'Logistics':     'truck',
-  'Food & Bev':    'coffee',
-  'Services':      'users',
+  'Manufacturing':        'factory',
+  'Technology':           'cpu',
+  'Construction':         'tool',
+  'Logistics':            'truck',
+  'Food & Beverage':      'coffee',
+  'Professional Services':'users',
+  'Retail & Wholesale':   'package',
+  'Agriculture':          'box',
+  'Healthcare':           'plus-circle',
+  'Education':            'briefcase',
+  'Hospitality & Tourism':'globe',
+  'Finance & Insurance':  'briefcase',
+  'Apparel & Textiles':   'box',
+  'Export & Import':      'truck',
+  'Printing & Packaging': 'package',
+  // Legacy keys — kept for any existing DB rows that still use old category names
+  'Food & Bev':           'coffee',
+  'Services':             'users',
 }
 
 export function CategoryIcon({ name, size = 22 }: { name: string; size?: number }) {
