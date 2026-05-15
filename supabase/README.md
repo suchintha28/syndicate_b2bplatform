@@ -21,6 +21,7 @@ supabase/
     ├── 20260515130000_fix_rfq_files_policy.sql
     ├── 20260515140000_products_add_extended_fields.sql
     ├── 20260515150000_create_reviews.sql
+    ├── 20260516000000_reviews_fk_and_photos_bucket.sql
     └── YYYYMMDDHHMMSS_description.sql   ← future migrations
 ```
 
@@ -42,6 +43,7 @@ supabase/
 | `20260515130000_fix_rfq_files_policy.sql` | **Fix:** add missing UPDATE policy on `rfq-files`; add PDF to allowed MIME types |
 | `20260515140000_products_add_extended_fields.sql` | Add `tiered_pricing`, `variations`, `product_specs`, `tech_specs` JSONB columns to `products` (default `'[]'::jsonb`) |
 | `20260515150000_create_reviews.sql` | Add `reviews` table; RLS (public read, auth write/edit/delete own); unique constraint `(reviewer_id, target_type, target_id)`; index for profile join |
+| `20260516000000_reviews_fk_and_photos_bucket.sql` | **Fix:** Add FK `reviews.reviewer_id → profiles(id)` so PostgREST resolves the profiles join. Create `review-photos` storage bucket (5 MB, JPG/PNG/WebP, public read / auth write). |
 
 ## Creating a new migration
 

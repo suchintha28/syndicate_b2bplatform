@@ -12,6 +12,7 @@
 | Storage | Supabase Storage |
 | CMS | Sanity.io v5 |
 | Data fetching | SWR 2.4 |
+| React | React 19 |
 | Deployment | Vercel (app) + Sanity Studio hosting (CMS editor) |
 | Unit testing | Vitest 4 + jsdom |
 | E2E testing | Playwright (Chromium) |
@@ -236,6 +237,7 @@ RLS is enabled on every table. Policy summary:
 | `logos` | Brand logo images | 2 MB | JPG, PNG, WebP |
 | `products` | Product photos | 5 MB | JPG, PNG, WebP |
 | `rfq-files` | RFQ attachments | 5 MB | JPG, PNG, WebP, PDF |
+| `review-photos` | Photos attached to product/brand reviews | 5 MB | JPG, PNG, WebP |
 
 All buckets are **public** (anyone can read a file if they have its URL). Write access is controlled by storage RLS policies.
 
@@ -276,12 +278,13 @@ Sanity manages all content that needs to be editable without a code deploy. The 
 | `aboutPage` | Singleton | Eyebrow, title, stats, values, CTA section |
 | `privacyPage` | Singleton | Last-updated date, sections array with Portable Text body |
 | `contactPage` | Singleton | Methods array, form title/subtitle, topic options |
+| `featuredMerchants` | Singleton | Ordered list of up to 6 brand slugs shown in the "Discover suppliers" section on the home page. Admin picks brands by slug; the home page fetches matching brands from Supabase on load. |
 
 ### Banner slots
 
 | Slot | Location |
 |---|---|
-| `home_hero` | Top of HomeScreen, above featured brands |
+| `home_hero` | Top of HomeScreen, below the search bar |
 | `explore_heading` | Top of ExploreScreen, above the search/filter bar |
 | `product_gallery` | ProductDetailScreen, between the image gallery and specifications |
 | `brand_about` | BusinessDetailScreen, in the brand about section |
@@ -305,14 +308,24 @@ Config files:
 
 ### Studio deployment
 
-The Sanity Studio editor runs separately from the Next.js app to avoid React 18/19 conflicts (Studio v5 requires React 19; the Next.js app uses React 18).
+The Sanity Studio editor lives in the `studio/` subdirectory with its own `package.json`. Both the root app and the studio now use React 19 (upgraded from React 18 when Sanity v5.25 added the React Compiler requirement). The studio uses Vite's `resolve.dedupe` to ensure a single React instance even when importing schemas from the parent project's `sanity/schemaTypes/` directory.
 
-| | URL |
+| | Value |
 |---|---|
-| Studio editor | `https://syndicate-b2b-cms.sanity.studio` |
-| Studio source | `studio/` directory (own `package.json` with React 19) |
+| Studio URL | `https://syndicate-cms.sanity.studio` |
+| Project ID | `mx1vcbbk` |
+| App ID | `mnftj2rmgcde3cq73p40jwhg` |
+| Studio source | `studio/` directory |
 
-To deploy studio changes: `cd studio && npx sanity deploy`
+To deploy studio changes after editing schemas or structure:
+```bash
+npm run studio:deploy   # from the project root
+```
+
+To run the studio locally:
+```bash
+npm run studio:dev
+```
 
 ---
 
@@ -432,6 +445,7 @@ Database changes are managed as sequential SQL files in `supabase/migrations/`.
 | `20260515130000_fix_rfq_files_policy.sql` | **Fix:** Add missing UPDATE policy on `rfq-files`; add PDF to allowed types |
 | `20260515140000_products_add_extended_fields.sql` | Add `tiered_pricing`, `variations`, `product_specs`, `tech_specs` JSONB columns to `products` (all default `'[]'::jsonb`) |
 | `20260515150000_create_reviews.sql` | Add `reviews` table with RLS, unique constraint on `(reviewer_id, target_type, target_id)`, and reviewer profile join index |
+| `20260516000000_reviews_fk_and_photos_bucket.sql` | **Fix:** Add direct FK `reviews.reviewer_id → profiles(id)` so PostgREST can resolve the `profiles` join in review queries. Create `review-photos` storage bucket with public-read / auth-write RLS policies. |
 
 ---
 
@@ -450,6 +464,21 @@ The original `products` storage policies used an `EXISTS (SELECT 1 FROM brands W
 **Migration:** `20260515130000_fix_rfq_files_policy.sql`
 
 The `rfq-files` bucket had INSERT and DELETE policies but no UPDATE policy. Because the upload code uses `upsert: true`, any re-upload of a file at the same path would silently fail. Fixed by adding a matching UPDATE policy with the same `auth.uid()` path check.
+
+### Reviews not displaying — missing FK to profiles
+
+**Migration:** `20260516000000_reviews_fk_and_photos_bucket.sql`
+
+The original `reviews` table defined `reviewer_id UUID REFERENCES auth.users(id)`. PostgREST's auto-join detection requires a **direct** foreign key between the two tables in a GROQ/PostgREST query. Because `auth.users` is a different schema, the join `.select('*, profiles(full_name, ...)')` returned a 400 error and reviews would never display.
+
+**Fix:** Added a second FK constraint pointing directly to `profiles(id)`:
+```sql
+ALTER TABLE reviews
+  ADD CONSTRAINT fk_reviewer_profile
+  FOREIGN KEY (reviewer_id) REFERENCES profiles(id) ON DELETE CASCADE;
+```
+
+This is safe because `profiles.id` mirrors `auth.users.id` — the values are identical for every row.
 
 ### Silent upload failures
 
@@ -475,12 +504,19 @@ Set in `.env.local` for local development. Set in Vercel project settings for pr
 
 | Target | Platform | Trigger |
 |---|---|---|
-| Next.js app | Vercel | Automatic on every `git push origin main` |
-| Database migrations | Supabase | Manual: `supabase db push` |
-| Sanity Studio | Sanity hosting | Manual: `cd studio && npx sanity deploy` |
+| Next.js app | Vercel | Automatic on every `git push origin main` (after CI passes) |
+| Database migrations | Supabase | Manual: paste each SQL file into Supabase SQL Editor |
+| Sanity Studio | Sanity hosting | Manual: `npm run studio:deploy` from project root |
+
+### CI pipeline
+
+Three jobs in `.github/workflows/ci.yml`:
+
+1. **unit-tests** — Vitest with coverage uploaded as artifact
+2. **e2e-tests** — Playwright (Chromium) against a production Next.js build
+3. **deploy** — Runs only on `main` push, only if both test jobs pass. Deploys to Vercel and then curls the production URL to confirm HTTP 200 (smoke test). No separate cron job needed.
 
 ### Vercel build notes
 
-- `.npmrc` contains `legacy-peer-deps=true` to resolve peer dependency conflicts between `next-sanity` and React 18.
 - `next.config.mjs` transpiles Sanity packages (`sanity`, `next-sanity`, `@sanity/ui`, `@sanity/icons`) so they compile correctly under Next.js.
-- The `studio/` directory is excluded from the Vercel build (it has its own deployment target). Make sure it is not tracked under `app/studio/` in git.
+- The `studio/` directory is excluded from the Vercel build — it is deployed separately to Sanity's hosting via `npm run studio:deploy`.

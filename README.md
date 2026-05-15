@@ -3,7 +3,7 @@
 A B2B marketplace platform built for the Sri Lankan market — connecting buyers with verified local suppliers for browsing, quoting, messaging, and sourcing.
 
 **Live app:** deployed on Vercel (auto-deploys on every push to `main`)
-**CMS editor:** https://syndicate-b2b-cms.sanity.studio
+**CMS editor:** https://syndicate-cms.sanity.studio
 
 ---
 
@@ -19,6 +19,7 @@ A B2B marketplace platform built for the Sri Lankan market — connecting buyers
 | Storage | Supabase Storage |
 | CMS | Sanity.io v5 |
 | Data fetching | SWR 2.4 |
+| React | React 19 |
 | Hosting | Vercel (app) + Sanity hosting (CMS) |
 | Unit tests | Vitest 4 + jsdom |
 | E2E tests | Playwright (Chromium) |
@@ -72,6 +73,9 @@ Run every file in `supabase/migrations/` in filename order through the Supabase 
 npm run dev                  # Start dev server (hot reload)
 npm run build                # Production build
 npm run start                # Start production server
+
+npm run studio:dev           # Start Sanity Studio locally
+npm run studio:deploy        # Deploy Sanity Studio to syndicate-cms.sanity.studio
 
 npm run test:unit            # Run unit tests (Vitest)
 npm run test:unit:watch      # Watch mode
@@ -150,14 +154,25 @@ See [supabase/README.md](supabase/README.md) for the full migration history and 
 
 ## CMS (Sanity)
 
-The Sanity Studio editor manages marketing banners and all static page content (About, Privacy, Contact).
+The Sanity Studio editor manages marketing banners, static page content (About, Privacy, Contact), and the curated "Discover suppliers" section on the home page.
 
-Studio URL: https://syndicate-b2b-cms.sanity.studio
+Studio URL: https://syndicate-cms.sanity.studio
 
-To deploy studio changes:
+To deploy studio changes after editing schemas or structure:
 ```bash
-cd studio && npx sanity deploy
+npm run studio:deploy
 ```
+
+### Sanity content types
+
+| Type | Kind | Purpose |
+|---|---|---|
+| `banner` | Repeatable | Marketing banners shown at specific page slots |
+| `siteSettings` | Singleton | Site name, tagline, contact details, social links |
+| `aboutPage` | Singleton | About page content |
+| `privacyPage` | Singleton | Privacy policy sections |
+| `contactPage` | Singleton | Contact page methods and form config |
+| `featuredMerchants` | Singleton | Up to 6 brand slugs shown in "Discover suppliers" on the home page |
 
 ---
 
@@ -167,6 +182,8 @@ GitHub Actions runs on every push and pull request to `main`:
 
 1. **Unit tests** — Vitest with coverage report uploaded as an artifact
 2. **E2E tests** — Playwright (Chromium) against a production build
+3. **Deploy** — Vercel production deploy (pushes to `main` only, runs after both test jobs pass)
+4. **Smoke test** — Curls the deployed Vercel URL and verifies HTTP 200 immediately after deploy
 
 Required GitHub Secrets (all are set):
 
