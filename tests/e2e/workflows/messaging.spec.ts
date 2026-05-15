@@ -126,8 +126,8 @@ test.describe('Send a private message to a supplier', () => {
   })
 
   test('"Send message" button is present on a brand detail page', async ({ page }) => {
-    // Scope to results <main> — [class*="card"] alone also matches the filter sidebar
-    const card = page.locator('main').last().locator('[class*="card" i]').first()
+    // Scope to results [role="main"] — [class*="card"] alone also matches the filter sidebar
+    const card = page.locator('[role="main"]').last().locator('[class*="card" i]').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return
@@ -140,7 +140,7 @@ test.describe('Send a private message to a supplier', () => {
   })
 
   test('clicking "Send message" opens the compose form', async ({ page }) => {
-    const card = page.locator('main').last().locator('[class*="card" i]').first()
+    const card = page.locator('[role="main"]').last().locator('[class*="card" i]').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return
@@ -163,7 +163,7 @@ test.describe('Send a private message to a supplier', () => {
   })
 
   test('filling and submitting the compose form sends the message', async ({ page }) => {
-    const card = page.locator('main').last().locator('[class*="card" i]').first()
+    const card = page.locator('[role="main"]').last().locator('[class*="card" i]').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return

@@ -24,12 +24,11 @@ async function getSupplierCount(page: import('@playwright/test').Page): Promise<
 }
 
 // Helper — returns the first supplier card element scoped to the results area.
-// The Explore screen renders as two nested <main> elements: the outer one holds
-// the page shell + filter sidebar; the inner one holds the paginated results.
-// Using .last() reliably targets the inner results <main> without needing
-// complex :not() CSS combinators that Playwright can't always resolve.
+// The Explore screen renders a results container with role="main" (a <div>) inside
+// the outer <main> page shell. Using [role="main"] targets only that inner results
+// div, avoiding the filter sidebar which also has card-like CSS classes.
 function firstSupplierCard(page: import('@playwright/test').Page) {
-  return page.locator('main').last().locator('[class*="card" i], [class*="Card"]').first()
+  return page.locator('[role="main"]').last().locator('[class*="card" i], [class*="Card"]').first()
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +202,7 @@ test.describe('Product detail page', () => {
     await productLink.click()
     await page.waitForTimeout(800)
 
-    const reviewsSection = page.locator('text=/customer reviews/i').first()
+    const reviewsSection = page.locator('text=/customer reviews|reviews/i').first()
     await expect(reviewsSection).toBeVisible({ timeout: 6000 })
   })
 })

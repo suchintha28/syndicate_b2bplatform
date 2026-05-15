@@ -41,10 +41,11 @@ const SEL = {
   activeChip:   '[class*="chip"], [class*="filter-chip"], [class*="active-filter"]',
 }
 
-// Count only supplier result cards scoped to the inner results <main>.
-// This avoids counting the filter sidebar which also has card-like CSS classes.
+// Count only supplier result cards scoped to the inner results area.
+// The results container has role="main" (a <div>); using [role="main"].last()
+// targets it specifically, avoiding the filter sidebar's card-like elements.
 async function countResultCards(page: import('@playwright/test').Page): Promise<number> {
-  return page.locator('main').last().locator('[class*="card" i]').count()
+  return page.locator('[role="main"]').last().locator('[class*="card" i]').count()
 }
 
 // ── Industry filter ────────────────────────────────────────────────────────────
