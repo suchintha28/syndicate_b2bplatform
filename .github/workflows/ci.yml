@@ -103,10 +103,17 @@ jobs:
       - name: Build the Next.js app
         run: npm run build
 
+      - name: Select E2E test scope
+        # Maps changed files to the relevant spec files so we don't run
+        # the full suite for every commit. Falls back to full suite when
+        # core infra (middleware, supabase, config) changes.
+        run: bash scripts/select-e2e-tests.sh
+
       - name: Run E2E tests
-        # In CI the webServer block in playwright.config.ts starts `npm run start`
-        # automatically — we don't need to start it manually here
-        run: npm run test:e2e
+        # PLAYWRIGHT_SPECS is set by the previous step (e.g. "tests/e2e/marketplace.spec.ts").
+        # When it equals "tests/e2e/" the full suite runs; otherwise only the relevant specs.
+        # The webServer block in playwright.config.ts starts `npm run start` automatically.
+        run: npx playwright test ${{ env.PLAYWRIGHT_SPECS }}
 
       - name: Upload Playwright report on failure
         uses: actions/upload-artifact@v4
@@ -129,6 +136,8 @@ jobs:
       VERCEL_TOKEN:                    ${{ secrets.VERCEL_TOKEN }}
       VERCEL_ORG_ID:                   ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID:               ${{ secrets.VERCEL_PROJECT_ID }}
+      NEXT_PUBLIC_SUPABASE_URL:        ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY:   ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       NEXT_PUBLIC_SANITY_PROJECT_ID:   ${{ secrets.NEXT_PUBLIC_SANITY_PROJECT_ID }}
       NEXT_PUBLIC_SANITY_DATASET:      production
 

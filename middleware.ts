@@ -5,11 +5,17 @@ const PROTECTED = ['/dashboard', '/onboarding', '/rfqs', '/inbox', '/profile']
 const AUTH_ONLY = ['/login', '/register', '/forgot-password', '/auth/reset-password']
 
 export async function middleware(request: NextRequest) {
+  // If Supabase env vars are not configured (e.g. Vercel project missing them)
+  // skip auth middleware rather than crashing with MIDDLEWARE_INVOCATION_FAILED.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next()
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
