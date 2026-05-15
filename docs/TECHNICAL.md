@@ -13,6 +13,9 @@
 | CMS | Sanity.io v5 |
 | Data fetching | SWR 2.4 |
 | Deployment | Vercel (app) + Sanity Studio hosting (CMS editor) |
+| Unit testing | Vitest 4 + jsdom |
+| E2E testing | Playwright (Chromium) |
+| CI | GitHub Actions |
 
 ---
 
@@ -273,6 +276,54 @@ The Sanity Studio editor runs separately from the Next.js app to avoid React 18/
 | Studio source | `studio/` directory (own `package.json` with React 19) |
 
 To deploy studio changes: `cd studio && npx sanity deploy`
+
+---
+
+## Testing
+
+### Overview
+
+| Type | Tool | Location | Runs |
+|---|---|---|---|
+| Unit tests | Vitest 4 + jsdom | `tests/unit/` | Instant, no server needed |
+| E2E tests | Playwright (Chromium) | `tests/e2e/` | Requires the Next.js app to be running |
+| CI | GitHub Actions | `.github/workflows/ci.yml` | On every push/PR to `main` |
+
+### Unit test files
+
+| File | What it covers |
+|---|---|
+| `tests/unit/generateSlug.test.ts` | `generateSlug()` in `lib/supabase/queries.ts` — slug rules, edge cases |
+| `tests/unit/dbAdapters.test.ts` | `dbBrandToBusiness()` and `dbProductToProduct()` — DB row → UI type conversion |
+| `tests/unit/authContext.test.tsx` | Supabase auth contract — session presence, `onAuthStateChange`, `signOut` (all mocked) |
+| `tests/unit/navOpts.test.ts` | Navigation logic — private screen guard, `rfqId`/`brandId` opt passing, guest redirects |
+
+### E2E test files
+
+| File | What it covers |
+|---|---|
+| `tests/e2e/guest-browsing.spec.ts` | Homepage, Explore, RFQs screens as a guest; auth redirect on protected actions |
+| `tests/e2e/auth.spec.ts` | `/register`, `/login`, `/forgot-password` — field presence, validation, error messages |
+| `tests/e2e/navigation.spec.ts` | Bottom nav tabs, logo click, mobile viewport (375 px) |
+| `tests/e2e/marketplace.spec.ts` | Homepage, Explore, RFQs screen smoke tests — no crashes, key elements present |
+
+### NPM scripts
+
+```bash
+npm run test:unit          # Run all unit tests once
+npm run test:unit:watch    # Re-run on file save (development)
+npm run test:unit:coverage # Run with HTML coverage report → coverage/index.html
+npm run test:e2e           # Run all E2E tests (starts dev server automatically)
+npm run test:e2e:ui        # Interactive Playwright UI for debugging
+npm run test:e2e:report    # Open the last Playwright HTML report
+npm run test               # Run unit tests then E2E tests
+```
+
+### Standing rule — test maintenance
+
+After any feature build or bug fix, always ask: "Do you want me to update the test suite to reflect these changes?" Tests are never updated or deleted without explicit confirmation. When a code change causes existing tests to fail, the failures are flagged and a fix plan is presented before any test files are changed.
+
+See `tests/README.md` for the full guide on running tests, reading reports, and adding new tests.
 
 ---
 
