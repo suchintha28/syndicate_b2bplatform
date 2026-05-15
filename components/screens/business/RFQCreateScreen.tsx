@@ -35,10 +35,12 @@ function RfqImageUploader({
       const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
       const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 5)}.${ext}`
       const { error } = await supabase.storage.from('rfq-files').upload(path, file, { upsert: true })
-      if (!error) {
-        const { data } = supabase.storage.from('rfq-files').getPublicUrl(path)
-        newUrls.push(data.publicUrl)
+      if (error) {
+        alert(`Failed to upload ${file.name}: ${error.message}`)
+        continue
       }
+      const { data } = supabase.storage.from('rfq-files').getPublicUrl(path)
+      newUrls.push(data.publicUrl)
     }
     onUpdate([...images, ...newUrls].slice(0, maxImages))
     setUploading(false)

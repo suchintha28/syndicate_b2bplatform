@@ -63,7 +63,9 @@ export default function BrandOnboardingPage() {
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
     const path = `${userId}/${Date.now()}.${ext}`
     const { error: upErr } = await supabase.storage.from('logos').upload(path, file, { upsert: true })
-    if (!upErr) {
+    if (upErr) {
+      alert(`Logo upload failed: ${upErr.message}`)
+    } else {
       const { data } = supabase.storage.from('logos').getPublicUrl(path)
       setForm(prev => ({ ...prev, logoUrl: data.publicUrl }))
     }

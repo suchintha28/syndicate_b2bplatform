@@ -15,7 +15,10 @@ export async function uploadImage(
   const path = `${userId}/${Date.now()}.${ext}`
   const supabase = createClient()
   const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true })
-  if (error) return null
+  if (error) {
+    alert(`Upload failed: ${error.message}`)
+    return null
+  }
   const { data } = supabase.storage.from(bucket).getPublicUrl(path)
   return data.publicUrl
 }
@@ -95,10 +98,12 @@ export function ProductImageUploader({ images, brandId, onUpdate }: {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
       const path = `${brandId}/${Date.now()}-${Math.random().toString(36).slice(2, 5)}.${ext}`
       const { error } = await supabase.storage.from('products').upload(path, file, { upsert: true })
-      if (!error) {
-        const { data } = supabase.storage.from('products').getPublicUrl(path)
-        newUrls.push(data.publicUrl)
+      if (error) {
+        alert(`Failed to upload ${file.name}: ${error.message}`)
+        continue
       }
+      const { data } = supabase.storage.from('products').getPublicUrl(path)
+      newUrls.push(data.publicUrl)
     }
     onUpdate([...images, ...newUrls].slice(0, 3))
     setUploading(false)
