@@ -12,12 +12,14 @@ Syndicate is a B2B marketplace platform built for the Sri Lankan market. It conn
 
 | Layer | Technology |
 |---|---|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 14.2 (App Router) |
 | Language | TypeScript |
 | Database | Supabase (PostgreSQL) |
 | Auth | Supabase Auth (email + password) |
 | File Storage | Supabase Storage |
-| Hosting | Vercel |
+| CMS | Sanity.io v5 (banners + all static page content) |
+| Client-side data fetching | SWR 2.4 |
+| Hosting | Vercel (app) + Sanity Studio hosting (CMS editor) |
 | Styling | Custom CSS (design tokens, utility classes) |
 | CLI | Supabase CLI (linked; migrations applied via `supabase db push`) |
 
@@ -31,6 +33,16 @@ The app uses a **hybrid pattern**:
 - Authentication pages (`/login`, `/register`, `/forgot-password`, `/auth/reset-password`) are separate **Next.js App Router pages** with their own layouts.
 - The brand onboarding page (`/onboarding/brand`) is a separate full-page route.
 - API logic lives in **Next.js Route Handlers** under `/app/api/`.
+
+### No dedicated backend
+
+There is no Express, Django, or custom API server. Supabase acts as the entire backend — database, auth, storage, and real-time. The only server-side code is a single API route (`app/api/delete-account`) which requires the Supabase admin key (never exposed to the browser). Everything else — reads, writes, file uploads — runs directly from the browser via the Supabase anon key, with Row-Level Security enforcing all access rules.
+
+### CMS
+
+All editable content (marketing banners, About/Privacy/Contact page copy, site settings) is managed through **Sanity.io**. The Next.js app fetches content from Sanity's CDN at runtime using SWR hooks with long cache windows. All info screens fall back to hardcoded content if Sanity returns nothing, so the site looks correct even before CMS content is published.
+
+The Sanity Studio editor is deployed separately at `https://syndicate-b2b-cms.sanity.studio` to avoid a React 18/19 version conflict (Studio v5 requires React 19; the Next.js app uses React 18).
 
 ### SPA Screen Map
 
@@ -210,10 +222,12 @@ Changes are saved to both the `profiles` table (personal + business fields) and 
 
 - **Profile photos** — stored in the `avatars` Supabase Storage bucket
 - **Brand logos** — stored in the `logos` Supabase Storage bucket
-- **RFQ and bid images** — stored in the `rfq-files` Supabase Storage bucket. Path: `{userId}/{timestamp}-{random}.{ext}`
+- **Product images** — stored in the `products` Supabase Storage bucket. Path: `{brandId}/{timestamp}-{random}.{ext}`. Up to 3 images per product.
+- **RFQ and bid images** — stored in the `rfq-files` Supabase Storage bucket. Path: `{userId}/{timestamp}-{random}.{ext}`. Also accepts PDFs.
 - All buckets are **public read** (images accessible via URL without auth)
 - Write access is restricted to the file owner via RLS policies on `storage.objects`
-- File naming convention: `{userId}/{timestamp}.{ext}` (avatars/logos) or `{userId}/{timestamp}-{random}.{ext}` (rfq-files)
+- File naming convention: `{userId}/{timestamp}.{ext}` (avatars/logos) or `{userId}/{timestamp}-{random}.{ext}` (rfq-files/products)
+- All upload call sites show an error message to the user if an upload fails — no silent failures
 
 ### 4.12 Account Deletion
 
@@ -264,7 +278,7 @@ Three tabs below the buy box:
 
 ### 4.15 Info Pages
 
-Three static informational pages accessible from the footer and direct navigation:
+Three informational pages whose content is managed in **Sanity CMS** and falls back to hardcoded defaults if no CMS content is published:
 
 **About Us** (`about`)
 - Stats strip: 1,247 verified suppliers · 8,930 products listed · $2.4B in RFQs YTD · 48h avg. quote response
@@ -282,7 +296,20 @@ Three static informational pages accessible from the footer and direct navigatio
 - Right column: contact form with name, email, company, topic dropdown (General / Sales / Verification / Press / Bug / Other), and message textarea
 - On submit, shows a success state with the submitted email address and a "Send another" reset button
 
-### 4.16 Add / Edit Product — Specifications
+### 4.16 Marketing Banners
+
+Horizontal marketing banners are placed at four locations in the app, each driven by a **Sanity CMS banner document**:
+
+| Slot | Location |
+|---|---|
+| `home_hero` | HomeScreen — above featured brands |
+| `explore_heading` | ExploreScreen — above search/filter bar |
+| `product_gallery` | ProductDetailScreen — between image gallery and specs |
+| `brand_about` | BusinessDetailScreen — in the brand about section |
+
+Each banner has: title, subtitle, CTA button (text + URL), background image, background colour, text colour, active toggle, sort order, and optional start/end date for scheduling. Banners are fetched with a 5-minute SWR cache and render nothing (zero layout impact) when no active banner exists for a slot. Banners are created and managed in the Sanity Studio at `https://syndicate-b2b-cms.sanity.studio`.
+
+### 4.17 Add / Edit Product — Specifications
 
 The product form (Add product and Edit product screens) includes a **Specifications** card between the Variations section and the Direct Sales toggle:
 
@@ -527,11 +554,15 @@ Steps 1–4 same as above, then:
 |---|---|---|---|---|
 | `avatars` | Yes | 2 MB | image/jpeg, image/png, image/webp | Profile photos |
 | `logos` | Yes | 2 MB | image/jpeg, image/png, image/webp | Brand logos |
-| `rfq-files` | Yes | 5 MB | image/jpeg, image/png, image/webp | RFQ images, bid images |
+| `products` | Yes | 5 MB | image/jpeg, image/png, image/webp | Product images (up to 3 per product) |
+| `rfq-files` | Yes | 5 MB | image/jpeg, image/png, image/webp, application/pdf | RFQ images, bid images, spec-sheet PDFs |
 
-File naming convention:
+File naming conventions:
 - `avatars` / `logos`: `{userId}/{timestamp}.{ext}` — uses `upsert: true` so re-upload replaces the file
+- `products`: `{brandId}/{timestamp}-{random4chars}.{ext}` — keyed by brand UUID, not user UUID
 - `rfq-files`: `{userId}/{timestamp}-{random4chars}.{ext}` — unique per upload
+
+All upload call sites surface storage errors to the user via `alert()` rather than swallowing them silently.
 
 ---
 
@@ -540,15 +571,44 @@ File naming convention:
 | File | Purpose |
 |---|---|
 | `app/page.tsx` | SPA root — all screen state, auth state, profile data, notification count, pending nav |
-| `components/screens/marketplace.tsx` | Home, Explore, Business Detail (with review modal), Product Detail (gallery, buy box, specs, reviews), Saved screens |
-| `components/screens/account.tsx` | Profile, ManageProfile, ManageProducts, ProductForm (with specs), Settings, Subscription screens |
-| `components/screens/business.tsx` | RFQs, RFQ Create, RFQ Detail, Messages, Message Form, Notifications, Success screens |
-| `components/screens/auth.tsx` | Inline auth screen (sign in + sign up tabs) |
-| `components/screens/info.tsx` | AboutScreen, PrivacyScreen, ContactScreen |
+| `components/screens/marketplace/HomeScreen.tsx` | Home screen — featured brands, marketing banner |
+| `components/screens/marketplace/ExploreScreen.tsx` | Explore/search with filters and banner |
+| `components/screens/marketplace/BusinessDetailScreen.tsx` | Brand profile with review modal |
+| `components/screens/marketplace/ProductDetailScreen.tsx` | Product gallery, buy box, specs, reviews, banner |
+| `components/screens/marketplace/SavedScreen.tsx` | Favourited brands |
+| `components/screens/account/ProfileScreen.tsx` | User dashboard hub |
+| `components/screens/account/ManageProfileScreen.tsx` | Edit profile + avatar/logo upload |
+| `components/screens/account/ManageProductsScreen.tsx` | Seller's product list |
+| `components/screens/account/ProductFormScreen.tsx` | Add / edit product with image upload and specs |
+| `components/screens/account/SettingsScreen.tsx` | Account settings |
+| `components/screens/account/SubscriptionScreen.tsx` | Membership / plan screen |
+| `components/screens/account/_shared.tsx` | `uploadImage()`, `ImageUploadCircle`, `ProductImageUploader`, `StatusPill`, `ProLock`, `DeleteAccountModal` |
+| `components/screens/business/RFQsScreen.tsx` | Browse / My RFQs / My Bids tabs |
+| `components/screens/business/RFQCreateScreen.tsx` | RFQ creation form with file upload |
+| `components/screens/business/RFQDetailScreen.tsx` | RFQ thread + bids + responses |
+| `components/screens/business/MessagesScreen.tsx` | Private inbox |
+| `components/screens/business/NotificationsScreen.tsx` | Notification feed |
+| `components/screens/info/AboutScreen.tsx` | About page (Sanity content with fallback) |
+| `components/screens/info/PrivacyScreen.tsx` | Privacy policy (Sanity content with fallback) |
+| `components/screens/info/ContactScreen.tsx` | Contact page (Sanity content with fallback) |
+| `components/MarketingBanner.tsx` | Sanity-powered banner component (renders nothing when no active banner) |
 | `components/nav.tsx` | TopNav, BottomNav, Footer |
 | `components/cards.tsx` | BusinessCard, ProductCard, MessageCard, CategoryTile |
 | `components/ui.tsx` | Shared UI primitives: Avatar, Button, Badge, Field, Stars, etc. |
 | `components/icons.tsx` | SVG icon library |
+| `hooks/useBanner.ts` | SWR hook for Sanity banners (5-min cache) |
+| `hooks/useSanityPage.ts` | SWR hooks for About/Privacy/Contact/SiteSettings (1-hour cache) |
+| `hooks/useUserData.ts` | SWR hook for user profile + brand |
+| `hooks/useBrandProducts.ts` | SWR hook for seller's products |
+| `hooks/useNotifCount.ts` | SWR hook for notification badge count (30s auto-refresh) |
+| `sanity/lib/client.ts` | Sanity API client |
+| `sanity/lib/queries.ts` | GROQ queries + TypeScript interfaces for all Sanity content types |
+| `sanity/lib/image.ts` | `urlFor()` image URL builder |
+| `sanity/schemaTypes/` | Sanity schema definitions: banner, siteSettings, aboutPage, privacyPage, contactPage |
+| `sanity/structure.ts` | Custom Sanity Studio structure (singletons + banner list) |
+| `sanity.config.ts` | Sanity Studio configuration |
+| `sanity.cli.ts` | Sanity CLI configuration (project ID, studioHost) |
+| `studio/` | Separate Sanity Studio workspace with React 19 (deployed to sanity.studio hosting) |
 | `lib/data.ts` | TypeScript interfaces (Business, Product, UserProfile, Screen, NavOpts), INDUSTRIES list |
 | `lib/supabase/client.ts` | Browser Supabase client |
 | `lib/supabase/server.ts` | Server-side Supabase client (uses cookies) |
@@ -556,13 +616,15 @@ File naming convention:
 | `lib/supabase/queries.ts` | `dbBrandToBusiness()` and `dbProductToProduct()` adapter functions |
 | `types/database.ts` | TypeScript types: DbBrand, DbProduct, DbProfile, DbRfq, DbRfqBid, DbRfqResponse, DbNotification |
 | `app/auth/callback/route.ts` | OAuth / email confirmation callback handler |
-| `app/api/delete-account/route.ts` | Server route for hard account deletion |
+| `app/api/delete-account/route.ts` | Server route for hard account deletion (uses admin key) |
 | `app/onboarding/brand/page.tsx` | Brand creation onboarding page |
 | `app/(auth)/login/page.tsx` | Standalone login page |
 | `app/(auth)/register/page.tsx` | Standalone registration page |
 | `app/(auth)/forgot-password/page.tsx` | Password reset request page |
 | `app/auth/reset-password/page.tsx` | Password reset completion page |
 | `middleware.ts` | Route protection middleware |
+| `next.config.mjs` | Next.js config — Sanity package transpilation, image remote patterns |
+| `.npmrc` | `legacy-peer-deps=true` for Vercel builds (resolves Sanity peer dep conflicts) |
 | `supabase/migrations/` | All DB migration SQL files |
 | `public/logo-light.jpeg` | Business Syndicate Group logo — light version (used in light mode) |
 | `public/logo-dark.jpeg` | Business Syndicate Group logo — dark version (used in dark mode) |
@@ -578,10 +640,13 @@ File naming convention:
 | `20260514000000_profile_delete_policy.sql` | Adds DELETE RLS policy on `profiles` for account deletion |
 | `20260514000001_business_profile_fields.sql` | Adds `business_name/industry/website/phone` to `profiles`; creates `business_members` table; adds `handle_new_brand` trigger |
 | `20260514000002_image_uploads.sql` | Adds `avatar_url` to `profiles`, `logo_url` to `brands`; creates `avatars` and `logos` storage buckets with RLS policies |
-| `20260514000003_product_images.sql` | Adds image upload support for product listings |
+| `20260514000003_product_images.sql` | Creates `products` storage bucket with RLS policies (original — superseded by fix below) |
 | `20260514000004_rfq_buyer_update.sql` | Adds RLS UPDATE policy so buyers can close their own RFQs |
 | `20260514000005_rfq_enhancements.sql` | Makes `brand_id` nullable (public RFQs); adds `category`, `budget_min/max`, `location`, `timeline`, `expires_at`, `images`, `is_public` to `rfqs`; creates `rfq_bids` table with RLS; creates `rfq-files` storage bucket |
 | `20260514000006_notifications.sql` | Creates `notifications` table with RLS; adds `read_by_buyer` column to `rfq_bids` |
+| `20260515000000_banners.sql` | Created a `banners` DB table (superseded — banners are now managed in Sanity CMS; table is unused) |
+| `20260515120000_fix_products_storage_policy.sql` | **Bug fix:** Products storage RLS had a SQL name collision causing all uploads to fail silently. Fixed by rewriting the policy to use `split_part(name,'/',1)` at the outer level where `name` unambiguously refers to `storage.objects.name` |
+| `20260515130000_fix_rfq_files_policy.sql` | **Bug fix:** `rfq-files` bucket was missing an UPDATE policy (causing `upsert: true` to fail silently on re-uploads). Also adds `application/pdf` to allowed MIME types for spec-sheet attachments |
 
 ---
 
@@ -592,6 +657,8 @@ File naming convention:
 | `NEXT_PUBLIC_SUPABASE_URL` | Client + server Supabase clients |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client + server Supabase clients |
 | `SUPABASE_SERVICE_ROLE_KEY` | Admin client only — server-side, never exposed to browser |
+| `NEXT_PUBLIC_SANITY_PROJECT_ID` | Sanity client (project: `mx1vcbbk`) |
+| `NEXT_PUBLIC_SANITY_DATASET` | Sanity client (default: `production`) |
 
 Set in `.env.local` for local development. Set in Vercel project settings for production.
 
@@ -599,19 +666,28 @@ Set in `.env.local` for local development. Set in Vercel project settings for pr
 
 ## 11. Deployment
 
+| Target | Platform | How to deploy |
+|---|---|---|
+| Next.js app | Vercel | Automatic on every `git push origin main` |
+| Database migrations | Supabase | Manual: `supabase db push` from project root |
+| Sanity Studio | Sanity hosting | Manual: `cd studio && npx sanity deploy` |
+
 - **Repository**: GitHub
-- **Hosting**: Vercel (auto-deploys on every push to `main`)
-- **Database**: Supabase (hosted PostgreSQL, separate project)
 - **Supabase CLI**: Linked to the project. Run `supabase db push` to apply any new migrations.
+- **Sanity Studio URL**: `https://syndicate-b2b-cms.sanity.studio`
 - **Domain**: Configured in Vercel project settings
 
-To deploy a change:
+To deploy a code change:
 1. Make code changes locally
 2. Run `npm run build` to verify no TypeScript/lint errors
 3. If a migration file was added, run `/opt/homebrew/bin/supabase db push` — it will prompt before applying
 4. `git add` the changed files
 5. `git commit` with a descriptive message
 6. `git push origin main` — Vercel picks it up automatically
+
+To update the Sanity Studio:
+1. Make schema or structure changes in `sanity/` or `studio/`
+2. `cd studio && npx sanity deploy`
 
 ---
 
@@ -626,5 +702,5 @@ To deploy a change:
 - **Bid counter-offers** — Buyers can only accept or decline bids as-is. A negotiation/counter-offer flow is not yet built.
 - **Reviews persistence** — Business profile and product reviews are UI-only (stored in React state). They reset on page refresh. A `reviews` table migration is needed to persist them.
 - **Product specs persistence** — Product and technical specs entered in the Add/Edit Product form are UI-only and not yet saved to the database. A future migration will add `product_specs` and `tech_specs` JSONB columns to the `products` table.
-- **Gallery images** — The product gallery currently shows the product's primary image plus two Unsplash seed images as placeholders. Full multi-image upload for products is not yet implemented.
 - **Review photo uploads** — Photos added in the review modal are simulated with placeholder Unsplash images (not a real file picker). A storage bucket and upload flow would be needed for production.
+- **CMS content population** — Sanity schemas for About, Privacy, Contact, and Site Settings are in place but the actual content has not been entered into the CMS yet; all three info screens currently display hardcoded fallback content.
