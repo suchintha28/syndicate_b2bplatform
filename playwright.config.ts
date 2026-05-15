@@ -20,17 +20,38 @@ export default defineConfig({
   },
 
   projects: [
+    // ── 1. Auth setup ─────────────────────────────────────────────────────────
+    // Runs first. Logs in once and writes tests/e2e/.auth/user.json.
+    // If credentials are absent it writes an empty state file so
+    // downstream projects still start without crashing.
+    {
+      name: 'setup',
+      testMatch: /setup\/auth\.setup\.ts/,
+    },
+
+    // ── 2. Guest tests (existing smoke tests) ─────────────────────────────────
+    // No authentication required. Runs in parallel with setup.
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /setup\/|workflows\//,
+    },
+
+    // ── 3. Authenticated workflow tests ───────────────────────────────────────
+    // Loads the saved session from step 1. All tests in tests/e2e/workflows/
+    // start with the browser already signed in.
+    {
+      name: 'chromium-authenticated',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/user.json',
+      },
+      testMatch: /workflows\//,
+      dependencies: ['setup'],
     },
   ],
 
-  // Automatically start the Next.js dev server before E2E tests
-  // (only when not already running — avoids port conflicts)
   webServer: {
-    // In CI: use the pre-built production server (faster and matches real behaviour)
-    // Locally: reuse an already-running dev server if one is on port 3000
     command: process.env.CI ? 'npm run start' : 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
