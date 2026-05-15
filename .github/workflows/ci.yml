@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  workflow_dispatch: {}   # allows manual trigger via GitHub API
   push:
     branches: [main]
     paths:
