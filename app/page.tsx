@@ -42,6 +42,8 @@ import {
   type UserProfile,
 } from '@/lib/data'
 import type { DbProduct } from '@/types/database'
+import { useUserData } from '@/hooks/useUserData'
+import { useNotifCount } from '@/hooks/useNotifCount'
 
 const DEFAULT_PROFILE: UserProfile = {
   fullName:         '',
@@ -125,53 +127,12 @@ export default function App() {
     setScreen(s)
   }, [user, pendingNav])
 
-  // Fetch real profile + brand data whenever the signed-in user changes
+  // Fetch real profile + brand data — cached by SWR, instant on re-navigation
+  const { userProfile: fetchedProfile, revalidate: revalidateProfile } = useUserData(user?.id)
   useEffect(() => {
-    if (!user) {
-      setUserProfile(DEFAULT_PROFILE)
-      return
-    }
-
-    const supabase = createClient()
-
-    async function loadProfile() {
-      const [{ data: profile }, { data: brand }] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user!.id).single(),
-        supabase.from('brands').select('*').eq('owner_id', user!.id).maybeSingle(),
-      ])
-
-      if (!profile) return
-
-      const parts = (profile.full_name || '').trim().split(/\s+/).filter(Boolean)
-      const initials = parts.length >= 2
-        ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-        : (profile.full_name || '').slice(0, 2).toUpperCase() || '?'
-
-      setUserProfile({
-        // Personal
-        fullName: profile.full_name,
-        email:    profile.email,
-        phone:    profile.phone || '',
-        logo:     initials,
-        // Business — sellers use brands table as source of truth;
-        // buyers use the profiles.business_* columns.
-        // Never fall back personal name into businessName.
-        businessName:     brand?.name     || profile.business_name     || '',
-        businessIndustry: brand?.categories[0] || profile.business_industry || '',
-        businessWebsite:  brand?.website  || profile.business_website  || '',
-        businessPhone:    brand?.phone    || profile.business_phone    || '',
-        description:      brand?.description || '',
-        brandId:          brand?.id,
-        brandSlug:        brand?.slug,
-        bannerColor:      DEFAULT_PROFILE.bannerColor,
-        role:             profile.role,
-        avatarUrl:        profile.avatar_url || undefined,
-        logoUrl:          brand?.logo_url    || undefined,
-      })
-    }
-
-    loadProfile()
-  }, [user])
+    if (!user) { setUserProfile(DEFAULT_PROFILE); return }
+    setUserProfile(fetchedProfile)
+  }, [user, fetchedProfile])
 
   const goTo = useCallback((s: Screen, opts?: NavOpts) => {
     // Redirect guests away from all private screens to auth
@@ -275,11 +236,12 @@ export default function App() {
       }
 
       setUserProfile(updated)
+      revalidateProfile() // bust SWR cache so next navigation gets fresh data
       return null
     } catch {
       return 'Network error. Please check your connection and try again.'
     }
-  }, [user])
+  }, [user, revalidateProfile])
 
   const setSelectedBusiness = useCallback((b: Business | null) => {
     setSelectedBusinessState(b)
@@ -336,19 +298,9 @@ export default function App() {
     fetchCount()
   }, [user, userProfile.brandId])
 
-  useEffect(() => {
-    if (!user) { setNotifCount(0); return }
-    const supabase = createClient()
-    async function fetchNotifCount() {
-      const { count } = await supabase
-        .from('notifications')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', user!.id)
-        .eq('read', false)
-      setNotifCount(count ?? 0)
-    }
-    fetchNotifCount()
-  }, [user])
+  // Notification badge count — SWR auto-refreshes every 30s
+  const { notifCount: swrNotifCount, revalidate: revalidateNotifs } = useNotifCount(user?.id)
+  useEffect(() => { setNotifCount(swrNotifCount) }, [swrNotifCount])
 
   const cardStyle = 'bordered' as const
 
@@ -497,7 +449,7 @@ export default function App() {
           />
         )
       case 'notifications':
-        return <NotificationsScreen goTo={goTo} onRead={() => setNotifCount(0)} />
+        return <NotificationsScreen goTo={goTo} onRead={() => revalidateNotifs()} />
       case 'settings':
         return <SettingsScreen goTo={goTo} />
       case 'subscription':
