@@ -4,29 +4,41 @@ import React, { useState } from 'react'
 import { Icon } from '@/components/icons'
 import { Button, PageHeader, Field, TextArea, Select } from '@/components/ui'
 import type { Screen } from '@/lib/data'
+import { useContactPage } from '@/hooks/useSanityPage'
+
+const FALLBACK_METHODS = [
+  { icon: 'mail',    label: 'Email',                value: 'hello@syndicate.example',    sub: 'General questions — we reply within one business day.' },
+  { icon: 'phone',   label: 'Phone',                value: '+94 11 555 0188',             sub: 'Mon–Fri, 09:00–18:00 Asia/Colombo.' },
+  { icon: 'message', label: 'Sales & partnerships', value: 'sales@syndicate.example',    sub: 'Volume buyers, integrations, enterprise plans.' },
+  { icon: 'pin',     label: 'Head office',          value: '200 Galle Road, Colombo 03', sub: 'Sri Lanka — visits by appointment.' },
+]
+const FALLBACK_TOPICS = [
+  'General inquiry', 'Sales & enterprise plans', 'Supplier verification',
+  'Press & media', 'Bug report', 'Something else',
+]
 
 export function ContactScreen({ goTo }: { goTo: (s: Screen) => void }) {
-  const [form, setForm] = useState({ name: '', email: '', company: '', topic: 'General inquiry', message: '' })
+  const { data: cms } = useContactPage()
+  const [form, setForm] = useState({ name: '', email: '', company: '', topic: '', message: '' })
   const [sent, setSent] = useState(false)
   const upd = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm(prev => ({ ...prev, [k]: e.target.value }))
 
+  const eyebrow     = cms?.eyebrow     ?? 'Contact us'
+  const title       = cms?.title       ?? 'Talk to a human.'
+  const subtitle    = cms?.subtitle    ?? 'Sales, partnerships, press, or a stuck order — pick the right channel below or send us a note.'
+  const methods     = cms?.methods?.length    ? cms.methods    : FALLBACK_METHODS
+  const topics      = cms?.topicOptions?.length ? cms.topicOptions : FALLBACK_TOPICS
+  const formTitle   = cms?.formTitle   ?? 'Send us a message'
+  const formSub     = cms?.formSubtitle ?? "Fill in the form and we'll route it to the right team."
+
   return (
     <div className="container fade-up" style={{ paddingBottom: 64 }}>
-      <PageHeader
-        eyebrow="Contact us"
-        title="Talk to a human."
-        sub="Sales, partnerships, press, or a stuck order — pick the right channel below or send us a note."
-      />
+      <PageHeader eyebrow={eyebrow} title={title} sub={subtitle} />
 
       <div className="contact-grid">
         <div>
-          {[
-            { icon: 'mail',    label: 'Email',                value: 'hello@syndicate.example',    sub: 'General questions — we reply within one business day.' },
-            { icon: 'phone',   label: 'Phone',                value: '+94 11 555 0188',             sub: 'Mon–Fri, 09:00–18:00 Asia/Colombo.' },
-            { icon: 'message', label: 'Sales & partnerships', value: 'sales@syndicate.example',    sub: 'Volume buyers, integrations, enterprise plans.' },
-            { icon: 'pin',     label: 'Head office',          value: '200 Galle Road, Colombo 03', sub: 'Sri Lanka — visits by appointment.' },
-          ].map(m => (
+          {methods.map(m => (
             <div className="contact-method" key={m.label}>
               <div className="contact-method-icon"><Icon name={m.icon} size={18} /></div>
               <div>
@@ -50,23 +62,20 @@ export function ContactScreen({ goTo }: { goTo: (s: Screen) => void }) {
                   {`We'll get back to you within one business day at `}
                   <span className="font-mono text-ink2">{form.email || 'your email'}</span>.
                 </p>
-                <Button variant="secondary" onClick={() => { setSent(false); setForm({ name: '', email: '', company: '', topic: 'General inquiry', message: '' }) }}>
+                <Button variant="secondary" onClick={() => { setSent(false); setForm({ name: '', email: '', company: '', topic: '', message: '' }) }}>
                   Send another
                 </Button>
               </div>
             ) : (
               <form onSubmit={(e) => { e.preventDefault(); setSent(true) }}>
-                <h3 className="font-display font-bold text-xl mb-1">Send us a message</h3>
-                <p className="text-sm text-muted mb-5">{`Fill in the form and we'll route it to the right team.`}</p>
+                <h3 className="font-display font-bold text-xl mb-1">{formTitle}</h3>
+                <p className="text-sm text-muted mb-5">{formSub}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                   <Field label="Your name" placeholder="Jane Doe" value={form.name} onChange={upd('name')} required />
                   <Field label="Email" type="email" placeholder="jane@acme.com" value={form.email} onChange={upd('email')} required />
                 </div>
                 <Field label="Company (optional)" placeholder="Acme Inc." value={form.company} onChange={upd('company')} />
-                <Select label="What is this about?" value={form.topic} onChange={upd('topic')} options={[
-                  'General inquiry', 'Sales & enterprise plans', 'Supplier verification',
-                  'Press & media', 'Bug report', 'Something else',
-                ]} />
+                <Select label="What is this about?" value={form.topic} onChange={upd('topic')} options={topics} />
                 <TextArea label="Message" placeholder="Tell us a bit more…" value={form.message} onChange={upd('message')} rows={5} required />
                 <div className="text-xs text-muted mb-4">
                   {`By submitting, you agree to our `}

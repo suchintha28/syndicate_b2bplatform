@@ -4,13 +4,13 @@
  * MarketingBanner
  *
  * Renders a horizontal promotional banner for a given slot.
- * Returns null (zero layout impact, no blank space) when:
- *   – no banner is active for this slot in the CMS
+ * Returns null (zero layout impact — no blank space) when:
+ *   – no banner is active for this slot in Sanity CMS
  *   – the SWR fetch hasn't resolved yet
  *
- * Banners are managed via the `banners` table in Supabase.
- * Fields: slot · title · subtitle · cta_text · cta_url ·
- *         image_url · bg_color · text_color · is_active · starts_at · ends_at
+ * Banners are managed via Sanity Studio at /studio → Marketing banners.
+ * Fields: slot · title · subtitle · ctaText · ctaUrl ·
+ *         image · bgColor · textColor · isActive · startsAt · endsAt
  */
 
 import React from 'react'
@@ -26,18 +26,18 @@ export function MarketingBanner({ slot, margin = '24px 0' }: Props) {
   const banner = useBanner(slot)
   if (!banner) return null
 
-  const hasImage  = !!banner.image_url
-  const hasText   = !!(banner.title || banner.subtitle)
-  const hasCta    = !!(banner.cta_text && banner.cta_url)
+  const hasImage = !!banner.imageUrl
+  const hasText  = !!(banner.title || banner.subtitle)
+  const hasCta   = !!(banner.ctaText && banner.ctaUrl)
 
   const card = (
     <div
       className="marketing-banner"
       style={{
         background: hasImage
-          ? `linear-gradient(rgba(0,0,0,0.38), rgba(0,0,0,0.38)), url(${banner.image_url}) center / cover no-repeat`
-          : banner.bg_color,
-        color: banner.text_color,
+          ? `linear-gradient(rgba(0,0,0,0.38), rgba(0,0,0,0.38)), url(${banner.imageUrl}) center / cover no-repeat`
+          : (banner.bgColor ?? '#1a1a2e'),
+        color: banner.textColor ?? '#ffffff',
         margin,
       }}
     >
@@ -48,14 +48,14 @@ export function MarketingBanner({ slot, margin = '24px 0' }: Props) {
         </div>
       )}
       {hasCta && (
-        <span className="marketing-banner-cta">{banner.cta_text}</span>
+        <span className="marketing-banner-cta">{banner.ctaText}</span>
       )}
     </div>
   )
 
-  if (banner.cta_url) {
+  if (banner.ctaUrl) {
     return (
-      <a href={banner.cta_url} style={{ display: 'block', textDecoration: 'none' }}>
+      <a href={banner.ctaUrl} style={{ display: 'block', textDecoration: 'none' }}>
         {card}
       </a>
     )

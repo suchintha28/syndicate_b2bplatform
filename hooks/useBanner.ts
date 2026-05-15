@@ -1,41 +1,23 @@
 import useSWR from 'swr'
-import { createClient } from '@/lib/supabase/client'
+import { fetchSanityBanner, type SanityBanner } from '@/sanity/lib/queries'
 
-export interface Banner {
-  id: string
-  slot: string
-  title: string | null
-  subtitle: string | null
-  cta_text: string | null
-  cta_url: string | null
-  image_url: string | null
-  bg_color: string
-  text_color: string
-}
-
-async function fetchBanner(slot: string): Promise<Banner | null> {
-  const supabase = createClient()
-  // RLS handles active / date window filtering server-side
-  const { data } = await supabase
-    .from('banners')
-    .select('id, slot, title, subtitle, cta_text, cta_url, image_url, bg_color, text_color')
-    .eq('slot', slot)
-    .order('sort_order', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-  return data ?? null
-}
-
-export function useBanner(slot: string) {
-  const { data } = useSWR<Banner | null>(
-    `banner-${slot}`,
-    () => fetchBanner(slot),
+/**
+ * Returns the active banner for a given slot, or null if:
+ *   – no banner is configured / active in Sanity
+ *   – the data is still loading
+ *
+ * In both cases the caller renders nothing (zero layout impact).
+ * SWR deduplicates requests and caches for 5 minutes.
+ */
+export function useBanner(slot: string): SanityBanner | null {
+  const { data } = useSWR<SanityBanner | null>(
+    `sanity-banner-${slot}`,
+    () => fetchSanityBanner(slot),
     {
-      revalidateOnFocus:  false,
-      dedupingInterval:   300_000, // 5-minute cache — banners don't change often
-      fallbackData:       null,
+      revalidateOnFocus: false,
+      dedupingInterval:  300_000,  // 5 min — banners change infrequently
+      fallbackData:      null,
     }
   )
-  // undefined (loading) and null (no banner) both treated the same: render nothing
   return data ?? null
 }
