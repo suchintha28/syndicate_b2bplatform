@@ -20,34 +20,53 @@ export default defineConfig({
   },
 
   projects: [
-    // ── 1. Auth setup ─────────────────────────────────────────────────────────
-    // Runs first. Logs in once and writes tests/e2e/.auth/user.json.
-    // If credentials are absent it writes an empty state file so
-    // downstream projects still start without crashing.
+    // ── 1a. Seller auth setup ─────────────────────────────────────────────────
+    // Logs in as the seller test account (E2E_USER_EMAIL) and writes
+    // tests/e2e/.auth/user.json. Skips gracefully if credentials are absent.
     {
       name: 'setup',
       testMatch: /setup\/auth\.setup\.ts/,
     },
 
-    // ── 2. Guest tests (existing smoke tests) ─────────────────────────────────
-    // No authentication required. Runs in parallel with setup.
+    // ── 1b. Buyer auth setup ──────────────────────────────────────────────────
+    // Logs in as the buyer test account (E2E_BUYER_EMAIL) and writes
+    // tests/e2e/.auth/buyer.json. Runs in parallel with the seller setup.
+    {
+      name: 'setup-buyer',
+      testMatch: /setup\/auth\.buyer\.setup\.ts/,
+    },
+
+    // ── 2. Guest tests (smoke tests — no auth required) ───────────────────────
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
       testIgnore: /setup\/|workflows\//,
     },
 
-    // ── 3. Authenticated workflow tests ───────────────────────────────────────
-    // Loads the saved session from step 1. All tests in tests/e2e/workflows/
-    // start with the browser already signed in.
+    // ── 3. Seller workflow tests ──────────────────────────────────────────────
+    // All tests/e2e/workflows/ files that are NOT buyer-specific.
+    // Starts with the seller account already signed in.
     {
       name: 'chromium-authenticated',
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'tests/e2e/.auth/user.json',
       },
-      testMatch: /workflows\//,
+      testMatch: /workflows\/(?!buyer-)/,
       dependencies: ['setup'],
+    },
+
+    // ── 4. Buyer workflow tests ───────────────────────────────────────────────
+    // Tests in tests/e2e/workflows/buyer-*.spec.ts.
+    // Starts with the buyer account already signed in.
+    {
+      name: 'chromium-buyer',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'tests/e2e/.auth/buyer.json',
+      },
+      testMatch: /workflows\/buyer-/,
+      dependencies: ['setup-buyer'],
     },
   ],
 

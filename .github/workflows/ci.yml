@@ -47,12 +47,11 @@ jobs:
       NEXT_PUBLIC_SANITY_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_SANITY_PROJECT_ID }}
       NEXT_PUBLIC_SANITY_DATASET: production
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
-      # Workflow test credentials — optional. When absent, all workflow tests
-      # skip themselves gracefully. Add these secrets to run authenticated flows.
+      # ── Seller test account (manages products, brand profile, RFQs) ──────────
       E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
       E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
       E2E_USER_ROLE: ${{ secrets.E2E_USER_ROLE }}
-      # Optional second account for two-party messaging tests (buyer ↔ seller)
+      # ── Buyer test account (browse, RFQ, message seller) ─────────────────────
       E2E_BUYER_EMAIL: ${{ secrets.E2E_BUYER_EMAIL }}
       E2E_BUYER_PASSWORD: ${{ secrets.E2E_BUYER_PASSWORD }}
 
