@@ -3,8 +3,34 @@ name: CI
 on:
   push:
     branches: [main]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'types/**'
+      - 'tests/**'
+      - 'supabase/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.ts'
+      - 'vitest.config.ts'
+      - 'next.config.*'
+      - '.github/workflows/**'
   pull_request:
     branches: [main]
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'types/**'
+      - 'tests/**'
+      - 'supabase/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'playwright.config.ts'
+      - 'vitest.config.ts'
+      - 'next.config.*'
+      - '.github/workflows/**'
 
 jobs:
   # ── Job 1: Unit tests ────────────────────────────────────────────────────────
