@@ -28,9 +28,12 @@ test.describe('Seller — add product workflow', () => {
       test.skip(true, SKIP_REASON)
       return
     }
-    // Navigate to the seller dashboard — session is pre-loaded via storageState
-    await page.goto('/dashboard')
+    // /dashboard redirects to /. Navigate to the seller's account area via the
+    // Profile nav button which opens the ProfileScreen where "Add product" lives.
+    await page.goto('/')
     await page.waitForLoadState('networkidle')
+    await page.locator('nav button, nav a').filter({ hasText: /^profile$/i }).first().click()
+    await page.waitForTimeout(600)
   })
 
   test('seller dashboard loads and shows the Add product button', async ({ page }) => {

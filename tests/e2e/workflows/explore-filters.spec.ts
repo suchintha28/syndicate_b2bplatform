@@ -41,6 +41,12 @@ const SEL = {
   activeChip:   '[class*="chip"], [class*="filter-chip"], [class*="active-filter"]',
 }
 
+// Count only supplier result cards scoped to the inner results <main>.
+// This avoids counting the filter sidebar which also has card-like CSS classes.
+async function countResultCards(page: import('@playwright/test').Page): Promise<number> {
+  return page.locator('main').last().locator('[class*="card" i]').count()
+}
+
 // ── Industry filter ────────────────────────────────────────────────────────────
 
 test.describe('Industry filter', () => {
@@ -84,7 +90,7 @@ test.describe('Industry filter', () => {
     const select = page.locator(SEL.industry).first()
     await expect(select).toBeVisible({ timeout: 5000 })
 
-    const countBefore = await page.locator(SEL.cards).count()
+    const countBefore = await countResultCards(page)
 
     // Apply a filter
     const optionCount = await select.locator('option').count()
@@ -97,7 +103,7 @@ test.describe('Industry filter', () => {
     await select.selectOption({ index: 0 })
     await page.waitForTimeout(500)
 
-    const countAfter = await page.locator(SEL.cards).count()
+    const countAfter = await countResultCards(page)
     expect(countAfter).toBe(countBefore)
   })
 })
@@ -135,14 +141,14 @@ test.describe('Location filter', () => {
     if (await selects.count() < 2) { test.skip(true, 'Location dropdown not present'); return }
 
     const locationSelect = selects.nth(1)
-    const countBefore = await page.locator(SEL.cards).count()
+    const countBefore = await countResultCards(page)
 
     await locationSelect.selectOption({ index: 1 })
     await page.waitForTimeout(400)
     await locationSelect.selectOption({ index: 0 })
     await page.waitForTimeout(400)
 
-    const countAfter = await page.locator(SEL.cards).count()
+    const countAfter = await countResultCards(page)
     expect(countAfter).toBe(countBefore)
   })
 })
@@ -212,12 +218,12 @@ test.describe('Sort options', () => {
       test.skip(true, 'A→Z sort chip not found'); return
     }
 
-    const countBefore = await page.locator(SEL.cards).count()
+    const countBefore = await countResultCards(page)
     await chip.click()
     await page.waitForTimeout(500)
 
     // Results should still be visible after sorting
-    const countAfter = await page.locator(SEL.cards).count()
+    const countAfter = await countResultCards(page)
     expect(countAfter).toBe(countBefore)
     await expect(page.locator('text=/something went wrong/i')).toHaveCount(0)
   })
@@ -328,7 +334,7 @@ test.describe('Active filter chips and reset', () => {
     const optionCount = await select.locator('option').count()
     if (optionCount < 2) { test.skip(true, 'No options to filter by'); return }
 
-    const countBefore = await page.locator(SEL.cards).count()
+    const countBefore = await countResultCards(page)
 
     await select.selectOption({ index: 1 })
     await page.waitForTimeout(400)
@@ -341,7 +347,7 @@ test.describe('Active filter chips and reset', () => {
     await resetBtn.click()
     await page.waitForTimeout(500)
 
-    const countAfter = await page.locator(SEL.cards).count()
+    const countAfter = await countResultCards(page)
     expect(countAfter).toBe(countBefore)
 
     // The reset button should be gone after resetting

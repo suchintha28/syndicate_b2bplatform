@@ -47,7 +47,8 @@ test.describe('Explore search and filtering', () => {
     ).first()
 
     await expect(searchInput).toBeVisible({ timeout: 5000 })
-    const cardsBefore = await page.locator('[class*="card"], [class*="Card"]').count()
+    // Scope to results <main> to avoid counting sidebar card-like elements
+    const cardsBefore = await page.locator('main').last().locator('[class*="card" i]').count()
 
     await searchInput.fill('zzz_no_match_xyz')
     await page.waitForTimeout(600)
@@ -56,7 +57,7 @@ test.describe('Explore search and filtering', () => {
     await page.waitForTimeout(600)
 
     // After clearing, cards should be back to the original count
-    const cardsAfter = await page.locator('[class*="card"], [class*="Card"]').count()
+    const cardsAfter = await page.locator('main').last().locator('[class*="card" i]').count()
     expect(cardsAfter).toBe(cardsBefore)
   })
 

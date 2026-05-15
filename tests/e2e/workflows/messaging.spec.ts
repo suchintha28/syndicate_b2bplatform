@@ -84,6 +84,11 @@ test.describe('Inbox — search and filter', () => {
     await expect(searchInput).toBeVisible({ timeout: 5000 })
 
     const cardsBefore = await page.locator('.card.card-hover').count()
+    if (cardsBefore === 0) {
+      test.skip(true, 'Inbox is empty — nothing to filter')
+      return
+    }
+
     await searchInput.fill('zzz_no_match_xyz')
     await page.waitForTimeout(400)
 
@@ -121,7 +126,8 @@ test.describe('Send a private message to a supplier', () => {
   })
 
   test('"Send message" button is present on a brand detail page', async ({ page }) => {
-    const card = page.locator('[class*="card"]').first()
+    // Scope to results <main> — [class*="card"] alone also matches the filter sidebar
+    const card = page.locator('main').last().locator('[class*="card" i]').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return
@@ -134,7 +140,7 @@ test.describe('Send a private message to a supplier', () => {
   })
 
   test('clicking "Send message" opens the compose form', async ({ page }) => {
-    const card = page.locator('[class*="card"]').first()
+    const card = page.locator('main').last().locator('[class*="card" i]').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return
@@ -157,7 +163,7 @@ test.describe('Send a private message to a supplier', () => {
   })
 
   test('filling and submitting the compose form sends the message', async ({ page }) => {
-    const card = page.locator('[class*="card"]').first()
+    const card = page.locator('main').last().locator('[class*="card" i]').first()
     if (!await card.isVisible({ timeout: 5000 }).catch(() => false)) {
       test.skip(true, 'No supplier cards in DB')
       return

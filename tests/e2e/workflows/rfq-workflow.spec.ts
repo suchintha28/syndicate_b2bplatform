@@ -29,7 +29,7 @@ test.describe('Create an RFQ (post a request)', () => {
   })
 
   test('RFQs screen shows "My requests" tab for a signed-in user', async ({ page }) => {
-    const myTab = page.locator('button').filter({ hasText: /my requests/i }).first()
+    const myTab = page.locator('button').filter({ hasText: /my rfqs?|my requests/i }).first()
     await expect(myTab).toBeVisible({ timeout: 6000 })
   })
 
@@ -105,7 +105,7 @@ test.describe('Create an RFQ (post a request)', () => {
   })
 
   test('submitted RFQ appears in "My requests" tab', async ({ page }) => {
-    const myTab = page.locator('button').filter({ hasText: /my requests/i }).first()
+    const myTab = page.locator('button').filter({ hasText: /my rfqs?|my requests/i }).first()
     const hasTab = await myTab.isVisible({ timeout: 5000 }).catch(() => false)
 
     if (!hasTab) {
